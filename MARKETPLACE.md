@@ -122,7 +122,7 @@
 - **Stripe (بین‌المللی)**: Charge در ارز دلار (`fa` تومان / `en` دلار)، چک‌اوت Checkout Session اگر
   `STRIPE_SECRET_KEY` باشد؛ در غیر این صورت همان درگاه آزمایشی در حالت USD. webhook/بازگشت و verify
   پیاده‌سازی شده است.
-- **آپلود چندبخشی**: مسیر `session → part → complete` با قطعه‌های ۸ مگابایتی، پشتیبانی از
+- **آپلود چندبخشی**: مسیر `session → part → complete` با قطعه‌های ۸ مگابایتی (کمینه ۵ مگابایت)، پشتیبانی از
   presigned PUT روی S3 (مرورگر مستقیم به باکت می‌فرستد و فقط etag را ثبت می‌کند) و مونتاژ نهایی
   (`assembleParts`). برای بک‌اند S3، مونتاژ Native (`UploadPart`/`CompleteMultipartUpload`) نیز موجود است.
 - **ClamAV**: اگر `CLAMAV_HOST` تنظیم شود، اسکن با clamd انجام می‌شود؛ در غیر این صورت اسکنر هیوریستیک
@@ -154,7 +154,7 @@
 | `/{locale}/marketplace` | ویترین دیجیتال (فیلتر نوع، جست‌وجو، مرتب‌سازی، سبد) |
 | `/{locale}/marketplace/[slug]` | صفحه اثر با پیش‌نمایش واترمارک‌شده، لیست لایسنس‌ها و شرایط استفاده |
 | `/{locale}/marketplace/cart` | پرداخت دیجیتال (کد تخفیف، انتخاب درگاه، فاکتور زنده) |
-| `/{locale}/checkout/return` | رسید سفارش + لایسنس‌ها + لینک دانلود و گواهی |
+| `/{locale}/checkout/return` | رسید سفارش با ریز صورتحساب (اقلام، تخفیف، مالیات، قابل پرداخت) + لایسنس‌ها + لینک دانلود و گواهی |
 | `/{locale}/checkout/sandbox` | صفحه‌ی درگاه آزمایشی |
 | `/{locale}/marketplace/subscriptions` | پلن‌های اشتراک و پنل پاس فعال |
 | `/{locale}/account/licenses` | گنجینه‌ی لایسنس‌ها (گواهی، دانلود، سهمیه، لینک راستی‌آزمایی) |
@@ -192,13 +192,18 @@ npm run build && node dist/.next/standalone/server.js
 اسکریپت‌های آماده‌ی تست دودی (همه در همین مخزن، بدون نیاز به فریمورک تست):
 
 ```bash
-node scripts/marketplace-smoke/seed-artist-user.mjs          # ساخت هنرمند محلی برای تست
+DATA=dist/.next/standalone/data node scripts/marketplace-smoke/seed-artist-user.mjs   # ساخت هنرمند محلی
 bash scripts/marketplace-smoke/http-e2e.sh                   # آپلود → بررسی → خرید → دانلود → گواهی
 bash scripts/marketplace-smoke/exclusive-e2e.sh              # فروش انحصاری و بازپرداخت
 bash scripts/marketplace-smoke/artist-e2e.sh                 # قیمت‌گذاری، فروش، تسویه، کد معرف
 bash scripts/marketplace-smoke/sub-e2e.sh                    # پلن اشتراک و دانلود پوشش‌داده‌شده
 bash scripts/marketplace-smoke/pages.sh                      # رندر همه‌ی صفحات جدید
+bash scripts/marketplace-smoke/multipart-e2e.sh             # آپلود چندبخشی فایل بزرگ (نیاز به تریگر زیر)
 ```
+
+برای تست مسیر چندبخشی با فایل کوچک، آستانه را پایین بیاورید و سرور را با آن اجرا کنید:
+`MARKETPLACE_MULTIPART_THRESHOLD_MB=5 node dist/.next/standalone/server.js` — اسکریپت با یک بافت
+۱۲ مگابایتی، دو قطعه می‌فرستد و بایت‌به‌بایت بودن فایل مونتاژشده و فایل تحویلی را بررسی می‌کند.
 
 مسیر پیشنهادی تست دستی (همه با داده‌ی واقعی اجرا شده است):
 
@@ -257,4 +262,6 @@ bash scripts/marketplace-smoke/pages.sh                      # رندر همه�
 4. **بک‌اند فایل محلی برای پروداکشن کافی نیست** (سیستم‌فایل سرورلس فقط-خواندنی است)؛ برای دیپلوی واقعی
    S3 (یا Upstash) لازم است — همان‌طور که برای محتوای سایت هم از قبل لازم بود.
 5. پیش از انتشار، توصیه می‌شود: یک خرید واقعی با مبلغ کم، یک آپلود >۲۰۰ مگابایت روی S3، و یک ارسال
-   ایمیل واقعی تست شود. دستور `npm run check` (typecript + eslint) در وضعیت فعلی سبز است.
+   ایمیل واقعی تست شود. در این محیط مسیر چندبخشی روی بک‌اند فایل محلی با فایل ۱۲ مگابایتی تست شده است؛
+   فقط presign خود S3 تأیید نشده.
+6. `npm run check` (typecheck + lint) در وضعیت فعلی سبز است: صفر خطا و ۴۸ هشدار از پیش موجود.

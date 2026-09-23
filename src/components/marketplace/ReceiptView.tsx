@@ -31,7 +31,11 @@ interface ReceiptData {
   order: {
     id: string;
     status: string;
-    total: { fa: number; en: number };
+    subtotal?: { fa: number; en: number };
+  discount?: { fa: number; en: number };
+  tax?: { fa: number; en: number };
+  couponCode?: string | null;
+  total: { fa: number; en: number };
     charge: { currency: "IRT" | "USD"; amount: number };
     paidAt?: string;
     provider?: string;
@@ -82,9 +86,41 @@ export function ReceiptView({ initial }: { initial: ReceiptData }) {
             </dd>
           </div>
           <div>
-            <dt className="text-caption text-foreground-secondary">{fa ? "مبلغ" : "Total"}</dt>
+            <dt className="text-caption text-foreground-secondary">{fa ? "مبلغ کل" : "Total"}</dt>
             <dd className="font-medium">{formatPrice(data.order.total, locale)}</dd>
           </div>
+          {data.order.subtotal && (
+            <div className="sm:col-span-2">
+              <dt className="text-caption text-foreground-secondary">{fa ? "ریز صورتحساب" : "Invoice breakdown"}</dt>
+              <dd className="mt-1 space-y-1 rounded-xl border border-border bg-background-secondary/40 p-3 text-caption">
+                {data.order.subtotal && (
+                  <span className="flex justify-between">
+                    <span>{fa ? "جمع اقلام" : "Items"}</span>
+                    <span>{formatPrice(data.order.subtotal, locale)}</span>
+                  </span>
+                )}
+                {data.order.discount && data.order.discount.fa + data.order.discount.en > 0 && (
+                  <span className="flex justify-between text-success">
+                    <span>
+                      {fa ? "تخفیف" : "Discount"}
+                      {data.order.couponCode ? ` (${data.order.couponCode})` : ""}
+                    </span>
+                    <span>−{formatPrice(data.order.discount, locale)}</span>
+                  </span>
+                )}
+                {data.order.tax && data.order.tax.fa + data.order.tax.en > 0 && (
+                  <span className="flex justify-between">
+                    <span>{fa ? "مالیات بر ارزش افزوده" : "VAT"}</span>
+                    <span>{formatPrice(data.order.tax, locale)}</span>
+                  </span>
+                )}
+                <span className="flex justify-between border-t border-border pt-1 font-medium">
+                  <span>{fa ? "قابل پرداخت" : "Amount due"}</span>
+                  <span>{formatPrice(data.order.total, locale)}</span>
+                </span>
+              </dd>
+            </div>
+          )}
           <div>
             <dt className="text-caption text-foreground-secondary">{fa ? "وضعیت" : "Status"}</dt>
             <dd className="font-medium">

@@ -116,6 +116,10 @@ export default async function CheckoutReturnPage({
           order: {
             id: resolved.id,
             status: resolved.status,
+            subtotal: resolved.subtotal,
+            discount: resolved.discount,
+            tax: resolved.tax,
+            couponCode: resolved.couponCode ?? null,
             total: resolved.total,
             charge: resolved.charge,
             paidAt: resolved.paidAt,

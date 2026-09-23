@@ -69,7 +69,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     order: {
       id: order.id,
       status: order.status,
+      /* Itemised so the receipt can show an honest invoice (VAT is 9 % in Iran). */
+      subtotal: order.subtotal,
+      discount: order.discount,
+      tax: order.tax,
       total: order.total,
+      couponCode: order.couponCode ?? null,
       charge: order.charge,
       paidAt: order.paidAt,
       provider: attempt?.provider,

@@ -4,6 +4,10 @@
  * /creators/join. Writes to data/users.json — dev/demo only.
  *
  *   node scripts/marketplace-smoke/seed-artist-user.mjs [email] [password]
+ *
+ * Set DATA to the store the running server actually uses (the standalone build
+ * chdir()s into its own folder):
+ *   DATA=dist/.next/standalone/data node scripts/marketplace-smoke/seed-artist-user.mjs
  */
 import fs from "fs";
 import path from "path";
@@ -19,7 +23,8 @@ function hash(value) {
   return `pbkdf2:${ITERATIONS}:${salt}:${key.toString("hex")}`;
 }
 
-const file = path.join(process.cwd(), "data", "users.json");
+const dir = process.env.DATA ?? path.join("data");
+const file = path.resolve(dir, "users.json");
 const users = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : [];
 const record = {
   id: "usr_niloufar",
