@@ -7,14 +7,16 @@ import { cn, href } from "@/lib/utils";
 /**
  * Account-type switch — the small segmented control on every registration page.
  *
- * Registration is one chooser plus one page per account type:
- *   /signup          → pick the kind of account
- *   /signup/buyer    → the buyer form
- *   /signup/artist   → the designer / seller form
+ * Registration is one shared form (SignupForm) that the visitor fills in on
+ * whichever page they reach:
+ *   /signup          → the form, opening on the buyer half
+ *   /signup/buyer    → the same form under the buyer heading
+ *   /signup/artist   → the designer / seller content page with the same form
  *
- * This control links between the two type pages (the page you are on is marked
- * with aria-current), so the type is always one click away — even when a visitor
- * lands on a page directly from a search result or an e-mail.
+ * The account type itself is chosen inside the form; this control only moves
+ * between the buyer page and the designer page (the page you are on is marked
+ * with aria-current), so the designer content is always one click away — even
+ * when a visitor lands here from a search result or an e-mail.
  */
 export function AccountTypeSwitch({ current, className }: { current: "buyer" | "artist"; className?: string }) {
   const { locale } = useLocale();

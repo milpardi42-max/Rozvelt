@@ -17,7 +17,8 @@ import {
 } from "lucide-react";
 import { PageHero } from "@/components/ui/PageHero";
 import { Reveal } from "@/components/ui/Reveal";
-import { CreatorSignupForm } from "@/components/profile/CreatorSignupForm";
+import { SignupForm } from "@/components/profile/SignupForm";
+import { specialtyOptions } from "@/lib/artist/specialty-options";
 import { AccountTypeSwitch } from "@/components/profile/AccountTypeSwitch";
 import { getSite } from "@/lib/data/queries";
 import { dictionaries } from "@/lib/i18n/dictionary";
@@ -37,12 +38,12 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: L
 /**
  * Seller registration — the artist / designer page.
  *
- * One of the two account-type pages (the chooser is /signup, the buyer one is
- * /signup/buyer). It is deliberately richer than the buyer page: it explains
- * the model (formats, colourways, licences, royalties, review), what is needed
- * to start, and then collects the designer through one single-page form — the
- * form it always had, plus an optional studio block. The account-type switch
- * under the hero links straight to the buyer form.
+ * This is the designer half of registration content: it explains the model
+ * (formats, colourways, licences, royalties, review) and what is needed to
+ * start. The form at the bottom is the *same* form the buyer pages use — one
+ * form for both account types — opened on the seller half, so a visitor who
+ * lands here can still switch to a buyer account inside the form. The
+ * account-type switch under the hero links straight to the buyer page.
  */
 export default async function JoinPage({ params }: { params: Promise<{ locale: Locale }> }) {
   const { locale } = await params;
@@ -147,9 +148,7 @@ export default async function JoinPage({ params }: { params: Promise<{ locale: L
     { label: d.nav.becomeCreator },
   ];
 
-  const options = fa
-    ? ["طراح سطح", "تصویرگر", "طراح گرافیک", "هنرمند سنتی", "استودیو"]
-    : ["Surface designer", "Illustrator", "Graphic designer", "Traditional artist", "Studio"];
+  const options = specialtyOptions(locale);
 
   return (
     <>
@@ -332,13 +331,13 @@ export default async function JoinPage({ params }: { params: Promise<{ locale: L
             <h2 className="font-display text-h2">{fa ? "فرم ثبت‌نام فروشنده" : "Seller registration"}</h2>
             <p className="mt-3 text-body-sm text-foreground-secondary">
               {fa
-                ? "همین یک فرم: حساب کاربری، حوزه‌ی فعالیت و شهر. اطلاعات استودیو، فرمت‌های تحویل و دسته‌های کاری اختیاری‌اند و هر زمان از داشبورد هنرمند قابل تکمیل. بعد از ثبت، همین حالا وارد داشبورد می‌شوید."
-                : "One single form: your account, field of practice and city. Studio details, delivery formats and product families are optional and can be completed later from the dashboard. You land straight in the artist dashboard."}
+                ? "همان یک فرم ثبت‌نام: با انتخاب «هنرمند / طراح» داخل فرم، حساب کاربری، حوزه‌ی فعالیت و شهر پرسیده می‌شود و اطلاعات استودیو، فرمت‌های تحویل و دسته‌های کاری اختیاری‌اند — هر زمان از داشبورد هنرمند قابل تکمیل. اگر خریدار هستید، همین فرم با انتخاب «خریدار» چهار فیلد دارد. بعد از ثبت، همین حالا وارد داشبورد می‌شوید."
+                : "One single registration form: choose “Artist / Designer” inside it and it asks for your account, field of practice and city, with studio details, delivery formats and product families optional — completable later from the dashboard. Just buying? The same form needs four fields with “Buyer” chosen. You land straight in the artist dashboard."}
             </p>
             <ul className="mt-6 space-y-3 text-caption text-foreground-secondary">
               <li className="flex gap-2">
                 <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-                {fa ? "خریدار هستید؟ صفحه‌ی ثبت‌نام خریدار: " : "Just buying? The buyer signup page: "}
+                {fa ? "خریدار هستید؟ صفحه‌ی ثبت‌نام خریدار: " : "Just buying? The buyer page: "}
                 <Link href={href(locale, "/signup/buyer")} className="font-medium text-foreground underline-offset-4 hover:underline">
                   {fa ? "ثبت‌نام خریدار" : "buyer signup"}
                 </Link>
@@ -351,7 +350,7 @@ export default async function JoinPage({ params }: { params: Promise<{ locale: L
           </div>
 
           <div className="lg:col-span-8">
-            <CreatorSignupForm options={options} />
+            <SignupForm variant="page" initialRole="artist" options={options} sharePct={DEFAULT_ARTIST_SHARE_PCT} />
           </div>
         </div>
 

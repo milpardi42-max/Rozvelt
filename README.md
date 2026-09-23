@@ -73,7 +73,7 @@ src/
     page.tsx               # homepage — sections driven by admin config
     patterns/ shop/ artists/ portfolio/ academy/ styles/ spaces/ collections/
     stories/ projects/ custom/ about/ contact/ faq/ returns/ legal/[doc]/
-    login/ signup/ (chooser · buyer/ · artist/) account/ favorites/ checkout/ search/ admin/
+    login/ signup/ (one form · buyer/ · artist/) account/ favorites/ checkout/ search/ admin/
     artist/                # dashboard (new) · marketplace (sales studio) · portfolio (manager)
   app/api/                 # newsletter, contact, admin content, auth, search-index, health
   app/sitemap.ts robots.ts # generated SEO files (use NEXT_PUBLIC_SITE_URL)
@@ -135,26 +135,27 @@ Products belong to one of eight families, defined once in `src/lib/data/families
   shop (`/{locale}/shop?family=<slug>`), and `/artist` shows the family next to each asset.
 - **Admin** — `ProductsManager` gives every product a «دسته محصول» selector (including «بدون دسته»).
 
-## Artists: signup split & dashboard
+## Artists: signup & dashboard
 
-Registration is a chooser plus one page per account type — the account type is picked in the form, and
-each kind gets its own page:
+Registration is **one form for both kinds of account** (`SignupForm`), and the account type is the
+visitor's own choice inside that form — a radio pair at the top of the form decides whether the buyer
+half or the seller half is open:
 
-- `/{locale}/signup` — **the chooser**: the buyer / artist-designer choice as a real radio form, each
-  card quoting what that account gets and carrying a direct link to its page.
-- `/{locale}/signup/buyer` — **buyers**: the short form they always had (name, e-mail, password,
-  confirmation) in the same shell, with the account-type switch above it.
-- `/{locale}/signup/artist` — **designers / sellers**: the same single-page form it always
-  had: name, e-mail, phone, field of practice, city, Instagram, portfolio and the password pair. Below
-  it sits an **optional** studio block: studio name, years of practice, a short bio, the **delivery
-  formats** they will upload (PNG/JPG/AI/PSD/SVG/EPS) and the **product families** they work in, plus
-  the seller terms. Nothing in that block is required — an empty answer is not stored and can be
-  completed later from the artist dashboard. `POST /api/auth/signup` sanitises and stores whatever was
-  given on the `Artist` record (`signupStudio`, `signupExperience`, `signupFormats`, `signupFamilies`,
+- `/{locale}/signup` — the form itself, opening on the **buyer** half (name, e-mail, password,
+  confirmation).
+- `/{locale}/signup/buyer` — the same form under a buyer heading, with the account-type switch above it.
+- `/{locale}/signup/artist` — the designers / sellers **content page** (formats, colourways, licences,
+  share, payouts, requirements, FAQ), ending in the same form opened on the **seller** half: phone,
+  field of practice, city, Instagram, portfolio and the password pair, followed by an **optional**
+  studio block — studio name, years of practice, a short bio, the **delivery formats** they will upload
+  (PNG/JPG/AI/PSD/SVG/EPS), the **product families** they work in and the seller terms. Nothing in the
+  seller half is required beyond the account fields: an empty answer is not stored and can be completed
+  later from the artist dashboard. `POST /api/auth/signup` sanitises and stores whatever was given on
+  the `Artist` record (`signupStudio`, `signupExperience`, `signupFormats`, `signupFamilies`,
   `signupTermsAt`, `bio`), creates the account, signs it in and sends the file to admin review.
-- The account-type switch (`AccountTypeSwitch`) sits on both type pages, so a visitor who lands on
-  either one can hop to the other in a click; `/{locale}/creators/join` (nav, footer, upsells, search
-  results) still works — it is a 307 redirect to `/{locale}/signup/artist`.
+- The account-type switch (`AccountTypeSwitch`) links the buyer page and the designer page, so a visitor
+  who lands on either one can reach the other in a click; `/{locale}/creators/join` (nav, footer,
+  upsells, search results) still works — it is a 307 redirect to `/{locale}/signup/artist`.
 
 The artist area:
 

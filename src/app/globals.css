@@ -1132,6 +1132,13 @@ html[dir="rtl"] {
   height: 42px !important;
 }
 
+/* …but the account-type radios and the terms checkbox keep their own size */
+.auth-card__form input[type="radio"],
+.auth-card__form input[type="checkbox"] {
+  height: 1rem !important;
+  width: 1rem !important;
+}
+
 .auth-card__form button[type="submit"],
 .auth-card__form .h-13 {
   height: 42px !important;

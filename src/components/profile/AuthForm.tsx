@@ -39,10 +39,10 @@ export function AuthForm({ mode, defaultRole, onSignupSuccess, prefill, autoSubm
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   /*
-   * This form is the *buyer* form (/signup/buyer). Designers register on their
-   * own page (/signup/artist) which collects the studio, the delivery formats
-   * and the product families — the account-type choice lives on /signup and in
-   * the switch above this form, so there is no role radio inside it.
+   * Registration no longer uses this component: both account types share one
+   * form (SignupForm), where the visitor picks «خریدار» or «هنرمند / طراح»
+   * himself. `mode="signup"` and `defaultRole` are kept so the component's
+   * contract still holds, but every signup route renders SignupForm instead.
    */
   const role = defaultRole ?? "user";
   const fa = locale === "fa";
