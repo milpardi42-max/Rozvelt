@@ -141,12 +141,14 @@ Registration has two doors, and they collect different things:
 
 - **Buyers** keep the short form at `/{locale}/signup` (name, e-mail, password, confirmation). It no
   longer switches account type — it links to the designer page instead.
-- **Designers / sellers** register at `/{locale}/creators/join`: a three-step application
-  (account → studio & craft → work & terms) that captures the studio name, field of practice, city,
-  years of practice, a short bio, the **delivery formats** they will upload (PNG/JPG/preview/AI/PSD/
-  SVG/EPS) and the **product families** they work in. `POST /api/auth/signup` stores all of it on the
-  `Artist` record (`signupStudio`, `signupExperience`, `signupFormats`, `signupFamilies`, …), creates
-  the account, signs it in and sends the file to admin review.
+- **Designers / sellers** register at `/{locale}/creators/join` — the same single-page form it always
+  had: name, e-mail, phone, field of practice, city, Instagram, portfolio and the password pair. Below
+  it sits an **optional** studio block: studio name, years of practice, a short bio, the **delivery
+  formats** they will upload (PNG/JPG/AI/PSD/SVG/EPS) and the **product families** they work in, plus
+  the seller terms. Nothing in that block is required — an empty answer is not stored and can be
+  completed later from the artist dashboard. `POST /api/auth/signup` sanitises and stores whatever was
+  given on the `Artist` record (`signupStudio`, `signupExperience`, `signupFormats`, `signupFamilies`,
+  `signupTermsAt`, `bio`), creates the account, signs it in and sends the file to admin review.
 
 The artist area:
 

@@ -37,8 +37,9 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: L
  *
  * This page is the *seller* side of registration and is deliberately richer
  * than the buyer signup: it explains the model (formats, colourways, licences,
- * royalties, review), what is needed to start, and then collects the studio
- * application through a three-step form. Buyers keep the short form at /signup.
+ * royalties, review), what is needed to start, and then collects the designer
+ * through one single-page form — the form it always had, plus an optional
+ * studio block. Buyers keep the short form at /signup.
  */
 export default async function JoinPage({ params }: { params: Promise<{ locale: Locale }> }) {
   const { locale } = await params;
@@ -72,8 +73,8 @@ export default async function JoinPage({ params }: { params: Promise<{ locale: L
   const steps = [
     {
       icon: BadgeCheck,
-      t: fa ? "۱. همین صفحه‌ی ثبت‌نام" : "1. This application",
-      s: fa ? "حساب کاربری، استودیو، فرمت‌های تحویل و دسته‌های کاری." : "Account, studio, delivery formats and product families.",
+      t: fa ? "۱. همین صفحه‌ی ثبت‌نام" : "1. This form",
+      s: fa ? "حساب کاربری، حوزه‌ی فعالیت و شهر؛ اطلاعات استودیو و فرمت‌ها اختیاری‌اند." : "Account, field of practice and city — studio details and formats are optional.",
     },
     {
       icon: ShieldCheck,
@@ -317,11 +318,11 @@ export default async function JoinPage({ params }: { params: Promise<{ locale: L
         {/* Application form */}
         <div id="apply" className="mt-16 grid gap-8 lg:grid-cols-12">
           <div className="lg:col-span-4">
-            <h2 className="font-display text-h2">{fa ? "پرونده‌ی فروشندگی" : "Seller application"}</h2>
+            <h2 className="font-display text-h2">{fa ? "فرم ثبت‌نام فروشنده" : "Seller registration"}</h2>
             <p className="mt-3 text-body-sm text-foreground-secondary">
               {fa
-                ? "سه گام کوتاه: حساب کاربری، استودیو و تخصص، و در پایان فرمت‌ها و دسته‌های کاری شما. بعد از ثبت، همین حالا وارد داشبورد هنرمند می‌شوید."
-                : "Three short steps: your account, your studio and craft, then your formats and families. You land straight in the artist dashboard."}
+                ? "همین یک فرم: حساب کاربری، حوزه‌ی فعالیت و شهر. اطلاعات استودیو، فرمت‌های تحویل و دسته‌های کاری اختیاری‌اند و هر زمان از داشبورد هنرمند قابل تکمیل. بعد از ثبت، همین حالا وارد داشبورد می‌شوید."
+                : "One single form: your account, field of practice and city. Studio details, delivery formats and product families are optional and can be completed later from the dashboard. You land straight in the artist dashboard."}
             </p>
             <ul className="mt-6 space-y-3 text-caption text-foreground-secondary">
               <li className="flex gap-2">

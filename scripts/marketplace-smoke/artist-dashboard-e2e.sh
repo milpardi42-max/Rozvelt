@@ -5,11 +5,13 @@
 # Proves, with a real registration and real pages, that:
 #   1. the buyer signup (/signup) keeps its short form and no longer switches
 #      account type — it points sellers at their own door
-#   2. the designer page (/creators/join) is the seller application: three steps,
-#      delivery formats, product families, terms
-#   3. POST /api/auth/signup really stores the seller file (studio, experience,
-#      declared formats + families, bio) on the Artist record and refuses an
-#      incomplete application
+#   2. the designer door (/creators/join) still carries the whole sell-side
+#      content (formats, families, money, FAQ) and serves the seller form as one
+#      single page — the form it always had, with the studio file offered as an
+#      optional block and no step wizard
+#   3. POST /api/auth/signup really stores that optional seller file (studio,
+#      experience, declared formats + families, bio, terms) on the Artist record
+#      when it is filled in, and invents nothing when it is not
 #   4. the admin sees that file and can approve the artist
 #   5. /artist is the artist dashboard (signed-out redirect, buyer upsell,
 #      artist KPIs + works + delivery + wallet) and /artist/portfolio still
@@ -41,6 +43,10 @@ ADMIN_JAR = "/tmp/artist-dashboard-admin.txt"
 STAMP = int(time.time())
 SELLER_EMAIL = f"studio.probe{STAMP}@example.com"
 BUYER_EMAIL = f"buyer.probe{STAMP}@example.com"
+MINIMAL_EMAIL = f"minimal.probe{STAMP}@example.com"
+TEST_EMAILS = (SELLER_EMAIL, BUYER_EMAIL, MINIMAL_EMAIL)
+# artist records created by this run, removed again in the cleanup section
+created_artists: list[str] = []
 
 failures: list[str] = []
 
@@ -117,27 +123,38 @@ for locale, seller_note in (("fa", "طراح یا فروشنده هستید؟"),
     check(f"{locale} · points designers at their own page", f"/{locale}/creators/join" in page and seller_note.lower() in text(page).lower())
 
 # ─────────────────────────────────────────────────────────────────────────────
-heading("2. the designer page is the seller application")
+heading("2. the designer door keeps its content and the previous single-page form")
 
 for locale in ("fa", "en"):
     page = curl([f"{BASE}/{locale}/creators/join"])
     plain = text(page)
-    check(f"{locale} · three-step application on the page",
-          all(needle in plain for needle in ("حساب کاربری", "استودیو و تخصص", "نمونه‌کار و تعهد")) if locale == "fa"
-          else all(needle in plain for needle in ("Account", "Studio & craft", "Work & terms")))
+    # the form itself is the one the designer page always served: one grid with
+    # the account fields, the field of practice, the city and the two links.
+    check(f"{locale} · the previous seller form is served as one page", all(
+        needle in page for needle in (
+            'name="name"', 'name="email"', 'name="phone"', 'name="city"',
+            'name="type"', 'name="instagram"', 'name="portfolio"',
+            'name="password"', 'name="confirm"',
+        )))
+    # …and the studio file is still offered, this time as an optional block
+    check(f"{locale} · the studio file is offered as an optional block", all(
+        needle in page for needle in ('name="studioName"', 'name="experience"', 'name="bio"', 'type="checkbox"', 'aria-pressed')))
+    inputs = {m.group(1): m.group(0) for m in re.finditer(r'<input[^>]*\bname="([^"]+)"[^>]*>', page)}
+    check(f"{locale} · only the account fields are required, everything else optional",
+          all(("required" in inputs.get(field, "<none>")) == (field in {"name", "email", "password", "confirm"})
+              for field in ("name", "email", "password", "confirm", "phone", "city", "instagram", "portfolio", "studioName", "bio")),
+          f"{len(inputs)} inputs")
+    check(f"{locale} · no step wizard is left on the page", not any(
+        needle in plain for needle in ("گام بعد", "گام قبل", "گام ۲", "گام ۳", "Next step", "Step 2", "Step 3")))
+    check(f"{locale} · the sell-side content is still there (formats, families, money)", all(
+        needle in page for needle in ('name="type"',)) and (
+        ("سهم فروش" in plain and "تسویه" in plain and "بازبینی" in plain) if locale == "fa"
+        else ("revenue share" in plain.lower() and "payout" in plain.lower())))
     check(f"{locale} · all seven delivery formats are offered",
           all(needle in plain for needle in ("PNG", "JPG", "PSD", "AI", "SVG", "EPS")))
     check(f"{locale} · the eight product families are offered",
           sum(1 for name in ("کاغذ دیواری", "پارچه دکوراسیون داخلی", "پرده", "کوسن", "روتختی", "رومیزی", "پارچه مبلمان", "آثار هنری دیواری")
               if name in plain) == 8 if locale == "fa" else "Wallpaper" in plain)
-    check(f"{locale} · all three steps are in the served form (account, studio, work)", all(
-        needle in page for needle in (
-            'name="name"', 'name="email"', 'name="password"', 'name="confirm"',
-            'name="studioName"', 'name="city"', 'name="experience"', 'name="bio"',
-            'name="instagram"', 'name="portfolio"', 'type="checkbox"',
-        )))
-    check(f"{locale} · explains the money and the guardrails",
-          ("سهم فروش" in plain and "تسویه" in plain and "بازبینی" in plain) if locale == "fa" else ("revenue share" in plain.lower() and "payout" in plain.lower()))
     check(f"{locale} · links the buyer signup back", f"/{locale}/signup" in page)
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -180,6 +197,7 @@ check("declared families are stored, unknown ids dropped", record.get("signupFam
 check("the short bio becomes the public bio", bool(record.get("bio", {}).get("fa", "").startswith("طراح سطح")))
 check("links from the form land on the artist", record.get("social", {}).get("instagram") == "toranj.studio" and record.get("social", {}).get("website") == "https://toranj.example.com")
 check("the artist starts as pending review", record.get("status") == "pending")
+created_artists.append(artist_id)
 
 # ‼ the signup endpoint throttles by IP (5 attempts/hour, in-process). Checks that
 # cannot run because the bucket is spent are reported as skips, never as passes.
@@ -200,8 +218,21 @@ def signup(label, body, expected, cookie=None):
     return out
 
 
-signup("an application without the terms is refused", {**seller_payload, "email": f"no-terms{STAMP}@example.com", "terms": False}, "terms_required")
-signup("an application without a field of practice is refused", {**seller_payload, "email": f"no-craft{STAMP}@example.com", "specialty": "   "}, "missing_specialty")
+# …and every field below the account is optional: a designer registers with the
+# account alone and completes the file later from the artist dashboard. Nothing
+# may be invented for the answers that were left empty.
+minimal = signup("a bare artist account registers without the optional block", {
+    "name": "مینا نمونه", "email": MINIMAL_EMAIL, "password": "artist-dev-pass", "role": "artist",
+}, None)
+if minimal and minimal.get("ok"):
+    minimal_id = minimal.get("user", {}).get("artistId", "")
+    created_artists.append(minimal_id)
+    minimal_record = next(
+        (row for row in load("content.json", {}).get("data", {}).get("artists", []) if row.get("id") == minimal_id), {})
+    check("nothing is invented for the fields left empty",
+          all(minimal_record.get(key) is None for key in ("signupStudio", "signupSpecialty", "signupFormats", "signupFamilies", "signupTermsAt")),
+          f"specialty={minimal_record.get('signupSpecialty')!r}")
+    check("the bare seller still starts as pending review", minimal_record.get("status") == "pending")
 signup("the same e-mail cannot register twice", seller_payload, "email_taken")
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -333,14 +364,14 @@ check("a private page bounces a signed-out visitor to login", status("/fa/artist
 # ─────────────────────────────────────────────────────────────────────────────
 heading("9. cleanup")
 
-users = [user for user in load("users.json", []) if user.get("email") not in (SELLER_EMAIL, BUYER_EMAIL)]
+users = [user for user in load("users.json", []) if user.get("email") not in TEST_EMAILS]
 save("users.json", users)
 content = load("content.json", {})
 data = content.get("data", {})
-data["artists"] = [row for row in data.get("artists", []) if row.get("id") != artist_id]
+data["artists"] = [row for row in data.get("artists", []) if row.get("id") not in created_artists]
 content["data"] = data
 save("content.json", content)
-print(f"  removed test accounts ({SELLER_EMAIL}, {BUYER_EMAIL}) and artist {artist_id}")
+print(f"  removed test accounts ({', '.join(TEST_EMAILS)}) and artists {created_artists}")
 
 print()
 if failures:

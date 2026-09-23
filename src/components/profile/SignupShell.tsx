@@ -96,8 +96,8 @@ export function SignupShell({ locale, image, dict }: SignupShellProps) {
             <p className="text-caption font-medium">{fa ? "طراح یا فروشنده هستید؟" : "Are you a designer or seller?"}</p>
             <p className="mt-1 text-caption text-foreground-secondary">
               {fa
-                ? "ثبت‌نام فروشندگان جداست: استودیو، فرمت‌های تحویل و دسته‌های کاری شما در یک پرونده‌ی سه‌گامی ثبت می‌شود."
-                : "Seller registration is separate: studio, delivery formats and product families in one three-step application."}
+                ? "ثبت‌نام فروشندگان جداست: در یک فرم کوتاه، حساب کاربری و حوزه‌ی فعالیت شما ثبت می‌شود و اطلاعات استودیو و فرمت‌های تحویل اختیاری‌اند."
+                : "Seller registration is separate: one short form for your account and field of practice — studio details and delivery formats are optional."}
             </p>
             <Link
               href={href(locale, "/creators/join")}

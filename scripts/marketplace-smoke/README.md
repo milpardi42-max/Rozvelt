@@ -47,9 +47,11 @@ Notes:
   `unsupported_type`, `raster_required`, `invalid_signature`), publishes it, buys it once and downloads
   all twelve deliverables — each must be byte-identical to what the artist uploaded.
 - `artist-dashboard-e2e.sh` is the registration rig: it asserts the buyer form kept its content and no
-  longer switches account type, that `/creators/join` offers the three-step seller application (studio,
-  formats, families, terms), that `POST /api/auth/signup` really stores that file on the Artist record
-  and refuses an incomplete application, that the admin sees it, and that `/artist` is the dashboard
+  longer switches account type, that `/creators/join` keeps its sell-side content and serves the seller
+  form as one single page — the account fields required, the studio block (studio, experience, bio,
+  formats, families, terms) optional and no step wizard left — that `POST /api/auth/signup` really stores
+  that file on the Artist record when it is filled in and invents nothing when it is not (and that the
+  same e-mail cannot register twice), that the admin sees it, and that `/artist` is the dashboard
   (signed-out redirect, buyer upsell, artist KPIs/works/delivery/wallet) while `/artist/portfolio` still
   serves the portfolio manager. It creates and deletes its own accounts. **Note:** the signup endpoint
   throttles by IP (5 attempts/hour, in-process), so a repeated run in the same server process reports

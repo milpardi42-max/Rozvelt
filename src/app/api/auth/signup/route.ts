@@ -68,34 +68,30 @@ export async function POST(req: Request) {
   const role = body.role === "artist" ? "artist" : "user";
 
   /*
-   * Buyers sign up with the short form (/signup); designers go through the
-   * seller registration (/creators/join), which declares the studio, the
-   * delivery formats and the product families they work in. Both land in the
-   * same account model — the seller fields are simply captured on the Artist
-   * record that self-registration creates.
+   * Buyers sign up with the short form (/signup); designers register on the
+   * seller page (/creators/join), which is one single-page form: the account,
+   * the field of practice and the city, plus an *optional* studio block —
+   * studio name, years of practice, a short bio, the delivery formats, the
+   * product families and the seller terms. None of it is required: an empty
+   * answer is simply not stored and can be completed later from the artist
+   * dashboard. Both doors land in the same account model — the seller fields
+   * are captured on the Artist record that self-registration creates.
    */
   let extra;
   if (role === "artist") {
-    const specialty = clean(body.specialty, 80);
-    if (!specialty || body.terms !== true) {
-      // A seller profile is only useful with a field of practice + accepted terms
-      return NextResponse.json(
-        { ok: false, error: !specialty ? "missing_specialty" : "terms_required" },
-        withNoStore({ status: 400 }),
-      );
-    }
     extra = {
       phone: clean(body.phone, 24),
       city: clean(body.city, 60),
-      specialty,
+      specialty: clean(body.specialty, 80),
       instagram: clean(body.instagram, 80),
       portfolioUrl: clean(body.portfolioUrl, 200),
       studioName: clean(body.studioName, 80),
-      experience: clean(body.experience, 3),
+      experience: clean(body.experience, 16),
       bio: clean(body.bio, 400),
       formats: knownIds(body.formats, isExportFormatId, 7),
       families: knownIds(body.families, isFamilyId, 8),
-      termsAt: new Date().toISOString(),
+      // recorded only when the designer actually accepted them
+      ...(body.terms === true ? { termsAt: new Date().toISOString() } : {}),
     };
   }
 

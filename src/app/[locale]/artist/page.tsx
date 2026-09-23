@@ -43,8 +43,8 @@ export default async function ArtistDashboardPage({ params }: { params: Promise<
           <h1 className="mt-4 font-display text-h2">{fa ? "اینجا خانه‌ی هنرمندان است" : "This is the artists' home"}</h1>
           <p className="mt-3 text-body-sm text-foreground-secondary">
             {fa
-              ? "حساب شما حساب خریدار است. برای فروش طرح‌ها، پرونده‌ی فروشندگی را ثبت کنید؛ استودیو، فرمت‌های تحویل و دسته‌های کاری‌تان در سه گام کوتاه ثبت می‌شود."
-              : "Yours is a buyer account. To sell designs, submit the seller application — studio, delivery formats and product families in three short steps."}
+              ? "حساب شما حساب خریدار است. برای فروش طرح‌ها، فرم ثبت‌نام فروشنده را پر کنید؛ حوزه‌ی فعالیت و شهر را می‌نویسید و اطلاعات استودیو و فرمت‌های تحویل اختیاری‌اند."
+              : "Yours is a buyer account. To sell designs, fill in the seller registration form — your field of practice and city, with studio details and delivery formats optional."}
           </p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
             <Link
