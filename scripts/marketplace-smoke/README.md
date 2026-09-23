@@ -46,10 +46,12 @@ Notes:
   builds the real files with `sharp`/`pdf-lib`), checks the refusal paths (`invalid_format`,
   `unsupported_type`, `raster_required`, `invalid_signature`), publishes it, buys it once and downloads
   all twelve deliverables — each must be byte-identical to what the artist uploaded.
-- `artist-dashboard-e2e.sh` is the registration rig: it asserts the buyer form kept its content and no
-  longer switches account type, that `/creators/join` keeps its sell-side content and serves the seller
-  form as one single page — the account fields required, the studio block (studio, experience, bio,
-  formats, families, terms) optional and no step wizard left — that `POST /api/auth/signup` really stores
+- `artist-dashboard-e2e.sh` is the registration rig: it asserts `/signup` is the chooser (both account
+  types as a real radio choice, one page each), that the buyer page (`/signup/buyer`) keeps its four
+  fields and the switch, that the artist page (`/signup/artist`) keeps its sell-side content and serves
+  the seller form as one single page — the account fields required, the studio block (studio,
+  experience, bio, formats, families, terms) optional and no step wizard left — that the old
+  `/creators/join` path 307s to the artist page, that `POST /api/auth/signup` really stores
   that file on the Artist record when it is filled in and invents nothing when it is not (and that the
   same e-mail cannot register twice), that the admin sees it, and that `/artist` is the dashboard
   (signed-out redirect, buyer upsell, artist KPIs/works/delivery/wallet) while `/artist/portfolio` still

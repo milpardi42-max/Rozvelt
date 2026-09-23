@@ -40,7 +40,7 @@ const EXPERIENCE_CHOICES = {
  * in, plus the seller terms. Nothing in that block is required: an empty answer
  * simply is not stored, and the designer can complete the file later from the
  * artist dashboard. Whatever is filled in lands on the Artist record the admin
- * reviews. Buyers keep the short four-field form at /signup.
+ * reviews. Buyers keep the short four-field form at /signup/buyer.
  */
 export function CreatorSignupForm({ options }: CreatorSignupFormProps) {
   const { locale } = useLocale();

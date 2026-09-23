@@ -10,7 +10,7 @@ import { href } from "@/lib/utils";
 
 interface AuthFormProps {
   mode: "login" | "signup";
-  /** Role pre-selected for signup (e.g. "artist" from /creators/join) */
+  /** Role pre-selected for signup (the buyer page pins this to "user") */
   defaultRole?: "user" | "artist";
   /** Called with credentials right after a successful signup, before navigation */
   onSignupSuccess?: (email: string, password: string) => void;
@@ -39,9 +39,10 @@ export function AuthForm({ mode, defaultRole, onSignupSuccess, prefill, autoSubm
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   /*
-   * This form is the *buyer* door. Sellers register through the designer
-   * page (/creators/join), which collects the studio, the delivery formats and
-   * the product families — so there is no account-type switch here anymore.
+   * This form is the *buyer* form (/signup/buyer). Designers register on their
+   * own page (/signup/artist) which collects the studio, the delivery formats
+   * and the product families — the account-type choice lives on /signup and in
+   * the switch above this form, so there is no role radio inside it.
    */
   const role = defaultRole ?? "user";
   const fa = locale === "fa";

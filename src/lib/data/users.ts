@@ -165,7 +165,7 @@ export async function createUser(
       // Explicitly provided (admin assigning an existing Artist record)
       resolvedArtistId = artistId;
     } else {
-      // Self-registration via /creators/join — create a fresh "pending" Artist record
+      // Self-registration via /signup/artist — create a fresh "pending" Artist record
       resolvedArtistId = await createPendingArtist(userId, name, email, signupExtra);
     }
   }

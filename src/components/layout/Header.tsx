@@ -234,7 +234,7 @@ export function Header({ nav }: { nav: NavData }) {
               {count > 0 && <span className="absolute top-1.5 inset-inline-end-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-white tabular anim-scale-fade">{count}</span>}
             </button>
 
-            <Link href={href(locale, "/creators/join")} className={cn("hidden lg:inline-flex h-10 items-center rounded-md px-4 text-[13px] font-semibold transition-[background-color,transform] hover:-translate-y-px ms-1", transparent ? "bg-white text-foreground hover:bg-white/90" : "bg-foreground text-background hover:bg-primary")}>
+            <Link href={href(locale, "/signup/artist")} className={cn("hidden lg:inline-flex h-10 items-center rounded-md px-4 text-[13px] font-semibold transition-[background-color,transform] hover:-translate-y-px ms-1", transparent ? "bg-white text-foreground hover:bg-white/90" : "bg-foreground text-background hover:bg-primary")}>
               {dict.nav.becomeCreator}
             </Link>
 
@@ -318,7 +318,7 @@ function MobileMenu({ open, onClose, nav, links, switchHref, otherLocale }: { op
             <Link href={switchHref} onClick={onClose} className="inline-flex h-10 items-center rounded-full border border-border px-4 text-sm font-semibold uppercase">{otherLocale === "fa" ? "فارسی" : "English"}</Link>
             <button type="button" onClick={toggle} className="inline-flex h-10 items-center gap-2 rounded-full border border-border px-4 text-sm">{theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}{dict.nav.theme}</button>
           </div>
-          <Link href={href(locale, "/creators/join")} onClick={onClose} className="mt-6 flex h-12 items-center justify-center rounded-md bg-foreground text-background font-semibold">{dict.nav.becomeCreator}</Link>
+          <Link href={href(locale, "/signup/artist")} onClick={onClose} className="mt-6 flex h-12 items-center justify-center rounded-md bg-foreground text-background font-semibold">{dict.nav.becomeCreator}</Link>
         </div>
       </div>
     </div>

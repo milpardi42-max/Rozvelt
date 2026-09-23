@@ -40,7 +40,7 @@ export default async function ArtistStudioPage({ params }: { params: Promise<{ l
               ? "برای فروش آثار دیجیتال، ابتدا پروفایل هنرمند خود را تکمیل کنید."
               : "Complete your artist profile before selling digital works."}
           </p>
-          <a href={href(locale, "/creators/join")} className="mt-5 inline-flex rounded-full bg-foreground px-5 py-3 text-sm text-background">
+          <a href={href(locale, "/signup/artist")} className="mt-5 inline-flex rounded-full bg-foreground px-5 py-3 text-sm text-background">
             {fa ? "تکمیل پروفایل هنرمند" : "Become an artist"}
           </a>
         </div>

@@ -69,7 +69,7 @@ export async function POST(req: Request) {
 
   /*
    * Buyers sign up with the short form (/signup); designers register on the
-   * seller page (/creators/join), which is one single-page form: the account,
+   * seller page (/signup/artist), which is one single-page form: the account,
    * the field of practice and the city, plus an *optional* studio block —
    * studio name, years of practice, a short bio, the delivery formats, the
    * product families and the seller terms. None of it is required: an empty

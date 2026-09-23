@@ -73,7 +73,7 @@ src/
     page.tsx               # homepage — sections driven by admin config
     patterns/ shop/ artists/ portfolio/ academy/ styles/ spaces/ collections/
     stories/ projects/ custom/ about/ contact/ faq/ returns/ legal/[doc]/
-    login/ signup/ account/ favorites/ checkout/ search/ creators/join/ admin/
+    login/ signup/ (chooser · buyer/ · artist/) account/ favorites/ checkout/ search/ admin/
     artist/                # dashboard (new) · marketplace (sales studio) · portfolio (manager)
   app/api/                 # newsletter, contact, admin content, auth, search-index, health
   app/sitemap.ts robots.ts # generated SEO files (use NEXT_PUBLIC_SITE_URL)
@@ -137,11 +137,14 @@ Products belong to one of eight families, defined once in `src/lib/data/families
 
 ## Artists: signup split & dashboard
 
-Registration has two doors, and they collect different things:
+Registration is a chooser plus one page per account type — the account type is picked in the form, and
+each kind gets its own page:
 
-- **Buyers** keep the short form at `/{locale}/signup` (name, e-mail, password, confirmation). It no
-  longer switches account type — it links to the designer page instead.
-- **Designers / sellers** register at `/{locale}/creators/join` — the same single-page form it always
+- `/{locale}/signup` — **the chooser**: the buyer / artist-designer choice as a real radio form, each
+  card quoting what that account gets and carrying a direct link to its page.
+- `/{locale}/signup/buyer` — **buyers**: the short form they always had (name, e-mail, password,
+  confirmation) in the same shell, with the account-type switch above it.
+- `/{locale}/signup/artist` — **designers / sellers**: the same single-page form it always
   had: name, e-mail, phone, field of practice, city, Instagram, portfolio and the password pair. Below
   it sits an **optional** studio block: studio name, years of practice, a short bio, the **delivery
   formats** they will upload (PNG/JPG/AI/PSD/SVG/EPS) and the **product families** they work in, plus
@@ -149,6 +152,9 @@ Registration has two doors, and they collect different things:
   completed later from the artist dashboard. `POST /api/auth/signup` sanitises and stores whatever was
   given on the `Artist` record (`signupStudio`, `signupExperience`, `signupFormats`, `signupFamilies`,
   `signupTermsAt`, `bio`), creates the account, signs it in and sends the file to admin review.
+- The account-type switch (`AccountTypeSwitch`) sits on both type pages, so a visitor who lands on
+  either one can hop to the other in a click; `/{locale}/creators/join` (nav, footer, upsells, search
+  results) still works — it is a 307 redirect to `/{locale}/signup/artist`.
 
 The artist area:
 

@@ -3,12 +3,12 @@
 # Registration split + artist dashboard — runs against a live server.
 #
 # Proves, with a real registration and real pages, that:
-#   1. the buyer signup (/signup) keeps its short form and no longer switches
-#      account type — it points sellers at their own door
-#   2. the designer door (/creators/join) still carries the whole sell-side
-#      content (formats, families, money, FAQ) and serves the seller form as one
-#      single page — the form it always had, with the studio file offered as an
-#      optional block and no step wizard
+#   1. registration is a chooser (/signup) plus one page per account type: the
+#      buyer page (/signup/buyer) keeps the short four-field form, the artist
+#      page (/signup/artist) carries the whole sell-side content (formats,
+#      families, money, FAQ) and serves the seller form as one single page — the
+#      form it always had, with the studio file offered as an optional block and
+#      no step wizard; the old /creators/join redirects to the artist page
 #   3. POST /api/auth/signup really stores that optional seller file (studio,
 #      experience, declared formats + families, bio, terms) on the Artist record
 #      when it is filled in, and invents nothing when it is not
@@ -98,6 +98,16 @@ def login(jar, email, password):
     return api("POST", "/api/auth/login", {"email": email, "password": password}, cookie=jar)
 
 
+def redirect_of(path):
+    """(status, location) of a path that is expected to redirect."""
+    out = subprocess.run(
+        ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code} %{redirect_url}", f"{BASE}{path}"],
+        capture_output=True,
+    ).stdout.decode()
+    code, _, location = out.partition(" ")
+    return code, location
+
+
 def load(name, fallback):
     path = os.path.join(DATA, name)
     if not os.path.exists(path):
@@ -112,21 +122,41 @@ def save(name, payload):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-heading("1. buyer signup keeps its content, without the account-type switch")
-
-for locale, seller_note in (("fa", "طراح یا فروشنده هستید؟"), ("en", "designer or seller")):
-    page = curl([f"{BASE}/{locale}/signup"])
-    form = page[page.find("auth-card__form") :] if "auth-card__form" in page else page
-    check(f"{locale} · buyer fields are the same four", all(
-        needle in form for needle in ('name="name"', 'name="email"', 'name="password"', 'name="confirm"')), )
-    check(f"{locale} · no account-type radio anywhere", 'name="account_role"' not in page)
-    check(f"{locale} · points designers at their own page", f"/{locale}/creators/join" in page and seller_note.lower() in text(page).lower())
-
-# ─────────────────────────────────────────────────────────────────────────────
-heading("2. the designer door keeps its content and the previous single-page form")
+heading("1. /signup is the chooser — one account type, one page")
 
 for locale in ("fa", "en"):
-    page = curl([f"{BASE}/{locale}/creators/join"])
+    page = curl([f"{BASE}/{locale}/signup"])
+    plain = text(page)
+    check(f"{locale} · both account types are offered as a real choice",
+          all(needle in page for needle in ('name="account_role"', 'type="radio"', 'value="buyer"', 'value="artist"')))
+    check(f"{locale} · each choice has its own page to open",
+          f"/{locale}/signup/buyer" in page and f"/{locale}/signup/artist" in page)
+    check(f"{locale} · no registration form on the chooser itself",
+          'name="confirm"' not in page and 'name="studioName"' not in page)
+    check(f"{locale} · names both kinds of account",
+          ("خریدار" in plain and "هنرمند" in plain) if locale == "fa" else ("Buyer" in plain and "Artist" in plain))
+
+    buyer_page = curl([f"{BASE}/{locale}/signup/buyer"])
+    buyer_form = buyer_page[buyer_page.find("auth-card__form") :] if "auth-card__form" in buyer_page else buyer_page
+    check(f"{locale} · buyer page keeps its four fields", all(
+        needle in buyer_form for needle in ('name="name"', 'name="email"', 'name="password"', 'name="confirm"')))
+    check(f"{locale} · the switch on the buyer page links to the artist page",
+          f"/{locale}/signup/artist" in buyer_page and 'aria-current="page"' in buyer_page)
+    check(f"{locale} · the buyer page still points designers at their own page",
+          f"/{locale}/signup/artist" in buyer_page
+          and ("طراح یا فروشنده هستید؟" if locale == "fa" else "designer or seller").lower() in text(buyer_page).lower())
+
+# the designer door moved under /signup — the old path must keep working
+for locale in ("fa", "en"):
+    code, location = redirect_of(f"/{locale}/creators/join")
+    check(f"{locale} · the old designer path redirects to the artist page",
+          code in ("307", "308") and location.endswith(f"/{locale}/signup/artist"), f"{code} {location}")
+
+# ─────────────────────────────────────────────────────────────────────────────
+heading("2. the artist page keeps its content and the previous single-page form")
+
+for locale in ("fa", "en"):
+    page = curl([f"{BASE}/{locale}/signup/artist"])
     plain = text(page)
     # the form itself is the one the designer page always served: one grid with
     # the account fields, the field of practice, the city and the two links.
@@ -155,7 +185,10 @@ for locale in ("fa", "en"):
     check(f"{locale} · the eight product families are offered",
           sum(1 for name in ("کاغذ دیواری", "پارچه دکوراسیون داخلی", "پرده", "کوسن", "روتختی", "رومیزی", "پارچه مبلمان", "آثار هنری دیواری")
               if name in plain) == 8 if locale == "fa" else "Wallpaper" in plain)
-    check(f"{locale} · links the buyer signup back", f"/{locale}/signup" in page)
+    check(f"{locale} · links the buyer signup back", f"/{locale}/signup/buyer" in page)
+    check(f"{locale} · carries the account-type switch, marked as the artist half",
+          'aria-current="page"' in page and f"/{locale}/signup/buyer" in page
+          and ("ثبت‌نام به عنوان:" if locale == "fa" else "signing up as:").lower() in plain.lower())
 
 # ─────────────────────────────────────────────────────────────────────────────
 heading("3. a real seller registration")
@@ -377,5 +410,5 @@ print()
 if failures:
     print(f"✘ {len(failures)} check(s) failed: {', '.join(failures)}")
     sys.exit(1)
-print("✔ buyer/seller registration split and the artist dashboard all verified")
+print("✔ the account-type signup pages and the artist dashboard all verified")
 PY

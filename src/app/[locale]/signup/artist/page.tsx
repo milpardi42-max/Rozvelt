@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import {
   ArrowLeftRight,
   BadgePercent,
@@ -17,6 +18,7 @@ import {
 import { PageHero } from "@/components/ui/PageHero";
 import { Reveal } from "@/components/ui/Reveal";
 import { CreatorSignupForm } from "@/components/profile/CreatorSignupForm";
+import { AccountTypeSwitch } from "@/components/profile/AccountTypeSwitch";
 import { getSite } from "@/lib/data/queries";
 import { dictionaries } from "@/lib/i18n/dictionary";
 import { DELIVERABLE_FORMATS, formatLabel } from "@/lib/marketplace/formats";
@@ -33,13 +35,14 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: L
 }
 
 /**
- * Seller registration — the designer door.
+ * Seller registration — the artist / designer page.
  *
- * This page is the *seller* side of registration and is deliberately richer
- * than the buyer signup: it explains the model (formats, colourways, licences,
- * royalties, review), what is needed to start, and then collects the designer
- * through one single-page form — the form it always had, plus an optional
- * studio block. Buyers keep the short form at /signup.
+ * One of the two account-type pages (the chooser is /signup, the buyer one is
+ * /signup/buyer). It is deliberately richer than the buyer page: it explains
+ * the model (formats, colourways, licences, royalties, review), what is needed
+ * to start, and then collects the designer through one single-page form — the
+ * form it always had, plus an optional studio block. The account-type switch
+ * under the hero links straight to the buyer form.
  */
 export default async function JoinPage({ params }: { params: Promise<{ locale: Locale }> }) {
   const { locale } = await params;
@@ -165,6 +168,14 @@ export default async function JoinPage({ params }: { params: Promise<{ locale: L
       />
 
       <section className="container-x pb-20">
+        {/* Account type — this page is the designer half of registration */}
+        <div className="mb-12 flex flex-wrap items-center justify-center gap-3">
+          <span className="text-caption text-foreground-secondary">
+            {fa ? "ثبت‌نام به عنوان:" : "Signing up as:"}
+          </span>
+          <AccountTypeSwitch current="artist" />
+        </div>
+
         {/* Perks */}
         <div className="grid gap-6 md:grid-cols-4">
           {perks.map((p, i) => (
@@ -327,10 +338,10 @@ export default async function JoinPage({ params }: { params: Promise<{ locale: L
             <ul className="mt-6 space-y-3 text-caption text-foreground-secondary">
               <li className="flex gap-2">
                 <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-                {fa ? "خریدار هستید؟ ثبت‌نام کوتاه خریدار: " : "Just buying? The short buyer signup: "}
-                <a href={href(locale, "/signup")} className="font-medium text-foreground underline-offset-4 hover:underline">
+                {fa ? "خریدار هستید؟ صفحه‌ی ثبت‌نام خریدار: " : "Just buying? The buyer signup page: "}
+                <Link href={href(locale, "/signup/buyer")} className="font-medium text-foreground underline-offset-4 hover:underline">
                   {fa ? "ثبت‌نام خریدار" : "buyer signup"}
-                </a>
+                </Link>
               </li>
               <li className="flex gap-2">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" />

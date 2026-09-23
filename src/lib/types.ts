@@ -38,7 +38,7 @@ export interface Artist {
   reviewsCount: number;
   /** Free-form tags used for filtering and display (e.g. "botanical", "geometric") */
   tags?: string[];
-  /** Linked user account id — set when artist registers via /creators/join */
+  /** Linked user account id — set when the designer registers via /signup/artist */
   userId?: ID;
   /** Extra fields captured at signup time */
   signupPhone?: string;
