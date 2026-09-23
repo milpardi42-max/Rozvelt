@@ -10,6 +10,7 @@ import { createUploadSession, getUploadSession, abortUploadSession } from "@/lib
 import { presignUpload, stagingPartKey } from "@/lib/marketplace/storage";
 import { fail, json, readJson, requireArtistOrAdmin } from "@/lib/marketplace/guard";
 import { clientIp, recordAttempt, tooManyAttempts } from "@/lib/rate-limit";
+import { isFamilyId } from "@/lib/data/families";
 import type { UploadSession } from "@/lib/marketplace/types";
 
 export const dynamic = "force-dynamic";
@@ -42,10 +43,13 @@ export async function POST(request: Request) {
     description?: { fa?: string; en?: string };
     kind?: UploadSession["meta"]["kind"];
     tags?: string[];
+    familyId?: string | null;
     patternId?: string | null;
   }>(request);
 
   if (!body?.filename || !body.mime || !body.sizeBytes) return fail("invalid_payload");
+  /* Every work must be filed under a real product family — see `lib/data/families.ts`. */
+  if (!isFamilyId(body.familyId)) return fail("invalid_family", 400);
   if (!ACCEPTED_MASTER_MIME[body.mime]) {
     return fail("unsupported_type", 415, { allowed: Object.keys(ACCEPTED_MASTER_MIME) });
   }
@@ -68,6 +72,7 @@ export async function POST(request: Request) {
         description: { fa: body.description?.fa ?? "", en: body.description?.en ?? "" },
         kind: body.kind ?? "pattern",
         tags: body.tags ?? [],
+        familyId: body.familyId,
         patternId: body.patternId ?? null,
       },
     });

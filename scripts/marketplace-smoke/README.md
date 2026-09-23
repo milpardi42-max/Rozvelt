@@ -17,6 +17,7 @@ bash scripts/marketplace-smoke/http-e2e.sh        # upload → review → buy �
 bash scripts/marketplace-smoke/exclusive-e2e.sh   # exclusive sale delists, refund relists
 bash scripts/marketplace-smoke/artist-e2e.sh      # artist studio: prices, sale, payout, coupon
 bash scripts/marketplace-smoke/sub-e2e.sh         # download pass, covered download, cancel
+bash scripts/marketplace-smoke/family-e2e.sh      # product families: shop grouping, sidebar tree, ?family=
 bash scripts/marketplace-smoke/pages.sh           # every storefront/admin page renders
 DATA=dist/.next/standalone/data \
 MARKETPLACE_MULTIPART_THRESHOLD_MB=5 \
@@ -29,6 +30,10 @@ Notes:
   `MARKETPLACE_MULTIPART_THRESHOLD_MB` below the size of the master it generates (12 MB), otherwise the
   upload takes the single-request path. It checks that the assembled master and the delivered download are
   both byte-identical to the source and that the staging chunks are deleted.
+- `family-e2e.sh` is the taxonomy rig: it asserts the canonical family order in `/shop`, the eight
+  nested sub-categories under «الگو» in the sidebar, `?family=<slug>` / `?family=other` isolation,
+  that `?category=` still filters, and that the upload session rejects a missing/unknown `familyId`.
+  It deletes the asset it uploads, so it can be re-run without polluting the store.
 - The scripts print each step; `http-e2e.sh` also asserts that the downloaded bytes are byte-identical
   to the uploaded master and that a tampered token is rejected.
 - They write to the app's local storage backend (`data/objects` and `data/mk-*.json`). Point `DATA` at

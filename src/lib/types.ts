@@ -135,6 +135,13 @@ export interface Product {
   title: Localized;
   description: Localized;
   categoryId: ID;
+  /**
+   * Product family (see `lib/data/families.ts`) — the real surface the product is
+   * made for: wallpaper, home fabric, curtain, cushion, bedspread, tablecloth,
+   * upholstery fabric or wall art. Optional: products created before the taxonomy
+   * exist are grouped under «سایر محصولات» in the shop.
+   */
+  familyId?: ID | null;
   patternId: ID | null;
   artistId: ID | null; // null → site-owned
   price: { fa: number; en: number };

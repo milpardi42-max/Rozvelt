@@ -19,7 +19,7 @@ echo "png bytes: $SIZE"
 
 step "3. create upload session"
 SESSION=$(curl -s -c $J -b $J -X POST $BASE/api/marketplace/upload/session -H 'content-type: application/json' \
-  -d "{\"filename\":\"heritage-tile.png\",\"sizeBytes\":$SIZE,\"mime\":\"image/png\",\"title\":{\"fa\":\"کاشی میراث\",\"en\":\"Heritage tile\"},\"description\":{\"fa\":\"الگوی تخت کاشی ایرانی\",\"en\":\"Flat Persian tile pattern\"},\"kind\":\"pattern\",\"tags\":[\"tile\",\"persian\"]}")
+  -d "{\"filename\":\"heritage-tile.png\",\"sizeBytes\":$SIZE,\"mime\":\"image/png\",\"title\":{\"fa\":\"کاشی میراث\",\"en\":\"Heritage tile\"},\"description\":{\"fa\":\"الگوی تخت کاشی ایرانی\",\"en\":\"Flat Persian tile pattern\"},\"kind\":\"pattern\",\"tags\":[\"tile\",\"persian\"],\"familyId\":\"fam-wallpaper\"}")
 echo "$SESSION" | head -c 600
 SID=$(echo "$SESSION" | python3 -c "import sys,json;print(json.load(sys.stdin)['session']['id'])")
 MODE=$(echo "$SESSION" | python3 -c "import sys,json;print(json.load(sys.stdin)['session']['mode'])")

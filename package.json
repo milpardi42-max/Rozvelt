@@ -7,8 +7,9 @@
   },
   "scripts": {
     "dev": "next dev --turbopack",
+    "prebuild": "node scripts/preserve-data.mjs --snapshot",
     "build": "next build",
-    "postbuild": "node scripts/sync-standalone.mjs",
+    "postbuild": "node scripts/sync-standalone.mjs && node scripts/preserve-data.mjs --restore",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",

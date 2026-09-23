@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { cn, href, t } from "@/lib/utils";
 import type { Product, Category, SiteContent } from "@/lib/types";
+import { PRODUCT_FAMILIES } from "@/lib/data/families";
 
 /* ─── helpers ─── */
 function farsiNum(n: number) {
@@ -110,6 +111,7 @@ function ProductRow({
             </span>
           )}
         </div>
+        <FamilyPicker product={product} onChange={onChange} className="mt-2" />
       </div>
 
       {/* پرچم‌ها */}
@@ -256,6 +258,8 @@ function ProductGridCard({
           </code>
         </div>
 
+        <FamilyPicker product={product} onChange={onChange} />
+
         {/* کنترل پرچم‌ها */}
         <div className="grid grid-cols-3 gap-1">
           {FLAGS.map((f) => {
@@ -284,6 +288,38 @@ function ProductGridCard({
   );
 }
 
+/* ─── انتخاب دسته‌بندی محصول (الگو) ─── */
+function FamilyPicker({
+  product,
+  onChange,
+  className,
+}: {
+  product: Product;
+  onChange: (updated: Product) => void;
+  className?: string;
+}) {
+  return (
+    <label className={cn("flex items-center gap-2 text-[11px] text-muted", className)}>
+      <span className="flex items-center gap-1">
+        <Tag className="h-3 w-3 opacity-60" />
+        دسته محصول
+      </span>
+      <select
+        value={product.familyId ?? ""}
+        onChange={(event) => onChange({ ...product, familyId: event.target.value || null })}
+        className="h-7 max-w-[12rem] flex-1 rounded-md border border-border bg-white px-2 text-[11px] text-foreground focus:border-foreground focus:outline-none"
+      >
+        <option value="">بدون دسته</option>
+        {PRODUCT_FAMILIES.map((family) => (
+          <option key={family.id} value={family.id}>
+            {family.name.fa}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 /* ─── AddProductModal ─── */
 function AddProductModal({
   categories,
@@ -298,6 +334,7 @@ function AddProductModal({
   const [titleEn, setTitleEn] = useState("");
   const [sku, setSku] = useState("");
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
+  const [familyId, setFamilyId] = useState("");
   const [priceFa, setPriceFa] = useState("");
   const [priceEn, setPriceEn] = useState("");
 
@@ -311,6 +348,7 @@ function AddProductModal({
       title: { fa: titleFa.trim(), en: titleEn.trim() || titleFa.trim() },
       description: { fa: "", en: "" },
       categoryId,
+      familyId: familyId || null,
       patternId: null,
       artistId: null,
       price: { fa: parseInt(priceFa) || 0, en: parseInt(priceEn) || 0 },
@@ -403,6 +441,23 @@ function AddProductModal({
                 ))}
               </select>
             </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-foreground-secondary">
+              دسته محصول (الگو)
+            </label>
+            <select
+              value={familyId}
+              onChange={(e) => setFamilyId(e.target.value)}
+              className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm focus:outline-none"
+            >
+              <option value="">بدون دسته</option>
+              {PRODUCT_FAMILIES.map((family) => (
+                <option key={family.id} value={family.id}>
+                  {family.name.fa}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

@@ -9,6 +9,7 @@ import { useMarketplaceCart } from "@/components/marketplace/MarketplaceCart";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { formatPrice, href, t } from "@/lib/utils";
+import { familyById } from "@/lib/data/families";
 import type { Locale } from "@/lib/i18n/types";
 import type { LicenseTier, PricePair } from "@/lib/marketplace/types";
 
@@ -19,6 +20,8 @@ export interface AssetDetailData {
   description: { fa: string; en: string };
   kind: string;
   tags: string[];
+  /** Product family chosen on upload (`lib/data/families.ts`) — optional. */
+  familyId?: string | null;
   status: string;
   soldExclusive: boolean;
   purchasable: boolean;
@@ -55,6 +58,7 @@ function bytes(value: number, locale: Locale) {
 
 export function AssetDetail({ locale, asset, artistName, couponHint }: Props) {
   const fa = locale === "fa";
+  const family = familyById(asset.familyId);
   const { add, has, remove, captureReferral } = useMarketplaceCart();
   const referral = useSearchParams().get("ref");
   useEffect(() => {
@@ -202,6 +206,11 @@ export function AssetDetail({ locale, asset, artistName, couponHint }: Props) {
           <div className="rounded-2xl border border-border p-6">
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone="neutral">{KIND_LABEL[asset.kind] ? t(KIND_LABEL[asset.kind], locale) : asset.kind}</Badge>
+              {family && (
+                <Link href={`${href(locale, "/shop")}?family=${family.slug}`} className="inline-flex">
+                  <Badge tone="outline">{family.name[locale] ?? family.name.fa}</Badge>
+                </Link>
+              )}
               {asset.seamless.verdict === "seamless" && <Badge tone="success">{fa ? "بی‌درز" : "Seamless"}</Badge>}
               {asset.soldExclusive && <Badge tone="error">{fa ? "انحصاری فروخته شد" : "Sold exclusively"}</Badge>}
             </div>

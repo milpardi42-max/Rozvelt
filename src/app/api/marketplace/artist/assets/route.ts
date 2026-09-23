@@ -40,6 +40,7 @@ export async function GET() {
       description: asset.description,
       kind: asset.kind,
       tags: asset.tags,
+      familyId: asset.familyId ?? null,
       status: asset.status,
       visibility: asset.visibility,
       createdAt: asset.createdAt,

@@ -157,6 +157,11 @@ export interface Asset {
   description: Localized;
   kind: AssetKind;
   tags: string[];
+  /**
+   * Product family the work is made for (`lib/data/families.ts`) — chosen by the
+   * artist on upload, used by the shop's «الگو» tree.
+   */
+  familyId?: ID | null;
 
   /** The private master file (full resolution, clean). */
   master: StoredFile;
@@ -216,6 +221,8 @@ export interface UploadSession {
     description: Localized;
     kind: AssetKind;
     tags: string[];
+    /** Product family chosen in the upload form. */
+    familyId?: string | null;
     patternId?: string | null;
     tiers: LicenseTier[];
   };

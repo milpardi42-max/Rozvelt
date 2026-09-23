@@ -309,6 +309,7 @@ export async function createUploadSession(input: CreateSessionInput): Promise<Up
       description: input.meta?.description ?? { fa: "", en: "" },
       kind: input.meta?.kind ?? "pattern",
       tags: input.meta?.tags ?? [],
+      familyId: input.meta?.familyId ?? null,
       patternId: input.meta?.patternId ?? null,
       tiers: input.meta?.tiers ?? defaultTiers(),
     },
@@ -450,6 +451,7 @@ export async function completeUpload(
     description: session.meta.description,
     kind: session.meta.kind,
     tags: session.meta.tags,
+    familyId: session.meta.familyId ?? null,
     master: {
       key: masterStoredKey,
       provider: session.provider,

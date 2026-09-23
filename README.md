@@ -55,6 +55,16 @@ ADMIN_EMAIL=… ADMIN_PASSWORD=… AUTH_SECRET=… PORT=3000 HOSTNAME=0.0.0.0 \
 If you ever build and then move things by hand, re-run `node scripts/sync-standalone.mjs` before
 starting the server.
 
+#### Runtime data and builds
+
+The store writes JSON and master files into `data/` relative to the working directory, so the
+standalone server owns `dist/.next/standalone/data`. `next build` bundles the repository copy of
+`data/*.json` (and `data/objects/**`) into that same folder — without protection, every deploy
+would overwrite live uploads, orders, licences and reservations with the committed snapshot.
+`scripts/preserve-data.mjs` fixes that: `prebuild` snapshots the running store to
+`.runtime-data/`, `postbuild` restores it verbatim. To re-seed the running store from `data/` on
+purpose, build with `ROZVELT_DATA_FROM_REPO=1`.
+
 ## Structure
 
 ```
@@ -103,6 +113,24 @@ PDF certificate → royalties → subscriptions) is documented in **[`MARKETPLAC
 including the audit, every new route, the env flags and a step-by-step test recipe.
 Without `ZARINPAL_MERCHANT_ID` the built-in sandbox gateway takes over, so a full test purchase works
 end-to-end today.
+
+## Product taxonomy (families)
+
+Products belong to one of eight families, defined once in `src/lib/data/families.ts` and stored on
+`Product.familyId` (and, for marketplace uploads, on `UploadSession.meta.familyId` → `Asset.familyId`):
+
+کاغذ دیواری · پارچه دکوراسیون داخلی · پرده · کوسن · روتختی · رومیزی · پارچه مبلمان · آثار هنری دیواری
+(Wallpaper · Home Fabric · Curtain · Cushion · Bedding · Tablecloth · Upholstery Fabric · Wall Art)
+
+- **Shop** — `/{locale}/shop` renders one section per family in that order (plus «سایر محصولات /
+  Other products» for products without a family) and `?family=<slug>` filters to a single family;
+  `?family` composes with `?category`, `?artist`, sorting and search. Style categories are unchanged.
+- **Sidebar** — the families appear as nested sub-categories under «الگو / Pattern», above the style
+  categories, with live counts.
+- **Artist upload** — the uploader in the artist profile requires a family; the session API answers
+  `invalid_family` otherwise. After a successful upload the artist is redirected to that family in the
+  shop (`/{locale}/shop?family=<slug>`), and `/artist` shows the family next to each asset.
+- **Admin** — `ProductsManager` gives every product a «دسته محصول» selector (including «بدون دسته»).
 
 ## Academy
 

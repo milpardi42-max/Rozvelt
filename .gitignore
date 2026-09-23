@@ -15,6 +15,7 @@
 /.next/
 /out/
 # build output (next.config.ts sets `distDir: "dist/.next"`)
+/.runtime-data/
 /dist/
 
 # production

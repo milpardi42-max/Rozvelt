@@ -26,15 +26,20 @@ export interface FilterGroup {
   key: string;
   label: string;
   options: FilterOption[];
-  /** How options render — radio list (default) or pill chips */
-  appearance?: "list" | "pills" | "swatches";
+  /** How options render — radio list (default), pill chips or a nested child list */
+  appearance?: "list" | "pills" | "swatches" | "nested";
 }
 
 interface Props {
-  /** Primary category group (always first) */
+  /** Primary category group (always first, unless `lead` groups are given) */
   categories: FilterOption[];
   sorts: FilterOption[];
   extra?: FilterGroup[];
+  /**
+   * Groups rendered *above* the category group. Used by the shop for the «الگو»
+   * family tree (wallpaper, curtain, …) that hangs under the pattern parent.
+   */
+  lead?: FilterGroup[];
   total: number;
   className?: string;
   /** Optional heading above the sidebar */
@@ -51,6 +56,7 @@ export function FilterSidebar({
   categories,
   sorts,
   extra = [],
+  lead = [],
   total,
   className,
   title,
@@ -82,10 +88,10 @@ export function FilterSidebar({
     let n = 0;
     if (sp.get("category")) n++;
     if (sp.get("sort")) n++;
-    for (const g of extra) if (sp.get(g.key)) n++;
+    for (const g of [...lead, ...extra]) if (sp.get(g.key)) n++;
     if (sp.get("q")) n++;
     return n;
-  }, [sp, extra]);
+  }, [sp, extra, lead]);
 
   const hasFilters = activeCount > 0;
 
@@ -106,6 +112,7 @@ export function FilterSidebar({
 
   const groups: FilterGroup[] = useMemo(
     () => [
+      ...lead.map((g) => ({ ...g, appearance: g.appearance ?? ("list" as const) })),
       {
         key: "category",
         label: dict.common.category,
@@ -120,7 +127,7 @@ export function FilterSidebar({
         appearance: "list",
       },
     ],
-    [categories, extra, sorts, dict],
+    [categories, extra, lead, sorts, dict],
   );
 
   const sidebarBody = (
@@ -253,7 +260,7 @@ export function FilterSidebar({
                   onClear={() => set("category", "all")}
                 />
               )}
-              {extra.map((g) => {
+              {[...lead, ...extra].map((g) => {
                 const v = sp.get(g.key);
                 if (!v) return null;
                 const lab = g.options.find((o) => o.id === v)?.label ?? v;
@@ -375,6 +382,30 @@ function FilterSection({
                   />
                 ))}
               </div>
+            ) : group.appearance === "nested" ? (
+              <ul className="space-y-0.5" role="listbox" aria-label={group.label}>
+                <OptionRow
+                  active={value === "all"}
+                  onClick={() => onChange("all")}
+                  label={allLabel}
+                  icon={<LayoutGrid className="h-3.5 w-3.5" />}
+                />
+                <li>
+                  <ul className="ms-[1.1rem] space-y-0.5 border-s border-border/70 ps-2">
+                    {group.options.map((o) => (
+                      <OptionRow
+                        key={o.id}
+                        nested
+                        active={value === o.id}
+                        onClick={() => onChange(o.id)}
+                        label={o.label}
+                        count={o.count}
+                        fa={fa}
+                      />
+                    ))}
+                  </ul>
+                </li>
+              </ul>
             ) : (
               <ul className="space-y-0.5" role="listbox" aria-label={group.label}>
                 <OptionRow
@@ -411,6 +442,7 @@ function OptionRow({
   swatch,
   icon,
   fa,
+  nested,
 }: {
   active: boolean;
   onClick: () => void;
@@ -419,6 +451,8 @@ function OptionRow({
   swatch?: string;
   icon?: React.ReactNode;
   fa?: boolean;
+  /** Child row of a nested group — tighter, and the marker becomes a small dot. */
+  nested?: boolean;
 }) {
   return (
     <li>
@@ -428,7 +462,8 @@ function OptionRow({
         aria-selected={active}
         onClick={onClick}
         className={cn(
-          "group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-start text-[13px] transition-all duration-200",
+          "group flex w-full items-center rounded-lg text-start transition-all duration-200",
+          nested ? "gap-2 px-2 py-1.5 text-[12.5px]" : "gap-2.5 px-2.5 py-2 text-[13px]",
           active
             ? "bg-foreground text-background shadow-soft"
             : "text-foreground-secondary hover:bg-background-secondary hover:text-foreground",
@@ -436,7 +471,8 @@ function OptionRow({
       >
         <span
           className={cn(
-            "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors",
+            "flex shrink-0 items-center justify-center rounded-full border transition-colors",
+            nested ? "h-4.5 w-4.5" : "h-5 w-5",
             active
               ? "border-background/30 bg-background/15"
               : "border-border bg-surface group-hover:border-foreground/30",

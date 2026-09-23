@@ -18,7 +18,7 @@ step "2. artist uploads a master"
 python3 $DIR/mktile.py /tmp/artist.png 512 512
 SIZE=$(stat -c%s /tmp/artist.png)
 S=$(curl -s -c $A -b $A -X POST $BASE/api/marketplace/upload/session -H 'content-type: application/json' \
-  -d "{\"filename\":\"gol-o-morgh.png\",\"sizeBytes\":$SIZE,\"mime\":\"image/png\",\"title\":{\"fa\":\"گل و مرغ\",\"en\":\"Gol o Morgh\"},\"description\":{\"fa\":\"نقش گل و مرغ برای چاپ پارچه\",\"en\":\"Persian gol-o-morgh textile print\"},\"kind\":\"pattern\",\"tags\":[\"textile\",\"persian\"]}")
+  -d "{\"filename\":\"gol-o-morgh.png\",\"sizeBytes\":$SIZE,\"mime\":\"image/png\",\"title\":{\"fa\":\"گل و مرغ\",\"en\":\"Gol o Morgh\"},\"description\":{\"fa\":\"نقش گل و مرغ برای چاپ پارچه\",\"en\":\"Persian gol-o-morgh textile print\"},\"kind\":\"pattern\",\"tags\":[\"textile\",\"persian\"],\"familyId\":\"fam-home-fabric\"}")
 SID=$(echo "$S" | python3 -c "import sys,json;print(json.load(sys.stdin)['session']['id'])")
 D=$(curl -s -c $A -b $A -X POST $BASE/api/marketplace/upload/complete -F "sessionId=$SID" -F "file=@/tmp/artist.png;type=image/png")
 echo "$D" | head -c 400

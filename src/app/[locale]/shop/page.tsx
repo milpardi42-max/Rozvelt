@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Truck } from "lucide-react";
-import { ShopFiltered } from "@/components/product/ShopFiltered";
+import { ShopFiltered, type FamilyOption } from "@/components/product/ShopFiltered";
 import { Badge } from "@/components/ui/Badge";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { FAMILY_PARENT, PRODUCT_FAMILIES } from "@/lib/data/families";
 import { getSite } from "@/lib/data/queries";
 import { dictionaries } from "@/lib/i18n/dictionary";
 import type { Locale } from "@/lib/i18n/types";
@@ -27,6 +28,14 @@ export default async function ShopPage({ params }: { params: Promise<{ locale: L
   const heroProduct = site.products.find((p) => !p.artistId && p.featured) ?? site.products[0];
   const banner = site.banners.find((b) => b.enabled && b.placement === "shop");
   const usedCats = site.categories.filter((c) => site.products.some((p) => p.categoryId === c.id));
+
+  /* The eight product families every pattern is made for — the «الگو» tree in the sidebar.
+     All of them stay listed (even before the first product lands in one) so an artist's
+     upload always has a real category to point at. */
+  const families: FamilyOption[] = PRODUCT_FAMILIES.map((family) => {
+    const count = site.products.filter((p) => p.familyId === family.id).length;
+    return { id: family.slug, label: family.name[locale] ?? family.name.fa, count: count || undefined };
+  });
 
   const breadcrumb = [
     { label: d.nav.home, href: href(locale, "/") },
@@ -76,6 +85,8 @@ export default async function ShopPage({ params }: { params: Promise<{ locale: L
           site={site}
           locale={locale}
           title={locale === "fa" ? "فروشگاه سطح و دکور" : "Surface & décor shop"}
+          families={families}
+          familyParent={FAMILY_PARENT[locale]}
           categories={usedCats
             .slice()
             .sort((a, b) => a.order - b.order)

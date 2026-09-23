@@ -138,7 +138,7 @@ export const products: Product[] = [
     id: "product-wallpaper-quiet-garden", sku: "RA-WP-2001", slug: "wallpaper-quiet-garden",
     title: L("کاغذدیواری — باغ آرام", "Wallpaper — Quiet Garden"),
     description: L("کاغذدیواری نان‌وون پریمیوم با الگوی گیاهی باغ آرام؛ مناسب نشیمن و اتاق خواب روشن.", "Premium non-woven wallpaper with the Quiet Garden botanical — ideal for bright living rooms and bedrooms."),
-    categoryId: "cat-botanical", patternId: "pattern-quiet-garden", artistId: "artist-niloufar-rad",
+    categoryId: "cat-botanical", familyId: "fam-wallpaper", patternId: "pattern-quiet-garden", artistId: "artist-niloufar-rad",
     price: { fa: 2450000, en: 89 }, compareAt: { fa: 2750000, en: 99 },
     colors: [
       color("ivory", "عاجی", "Ivory", "#efe9dd", "/images/colorways/qg-ivory.jpg"),
@@ -159,7 +159,7 @@ export const products: Product[] = [
     id: "product-wallpaper-copper-damask", sku: "RA-WP-2002", slug: "wallpaper-copper-damask",
     title: L("کاغذدیواری — داماسک مسی", "Wallpaper — Copper Damask"),
     description: L("کاغذدیواری لوکس با نقش داماسک مسی روی اسلیت تیره؛ برای لابی، هتل و فضاهای شبانه.", "Luxury wallpaper with copper damask on deep slate — for lobbies, hotels and evening spaces."),
-    categoryId: "cat-luxury", patternId: "pattern-copper-damask", artistId: "artist-arman-kian",
+    categoryId: "cat-luxury", familyId: "fam-wallpaper", patternId: "pattern-copper-damask", artistId: "artist-arman-kian",
     price: { fa: 3200000, en: 118 },
     colors: [
       color("slate", "اسلیت", "Slate", "#1c1f26", "/images/colorways/cd-slate.jpg"),
@@ -180,7 +180,7 @@ export const products: Product[] = [
     id: "product-fabric-dusty-bloom", sku: "RA-FB-2003", slug: "fabric-dusty-bloom",
     title: L("طراحی پارچه — شکوفه‌ی غبارآلود", "Fabric design — Dusty Bloom"),
     description: L("پارچه کتان چاپی با گل‌های صدتومانی آبرنگی؛ مناسب روکش مبل، کوسن و لباس خانگی.", "Printed linen with watercolour peonies — for upholstery, cushions and home apparel."),
-    categoryId: "cat-floral", patternId: "pattern-dusty-bloom", artistId: "artist-sara-mehr",
+    categoryId: "cat-floral", familyId: "fam-home-fabric", patternId: "pattern-dusty-bloom", artistId: "artist-sara-mehr",
     price: { fa: 980000, en: 48 },
     colors: [
       color("rose", "رز غبارآلود", "Dusty rose", "#c99a92", "/images/colorways/db-rose.jpg"),
@@ -201,7 +201,7 @@ export const products: Product[] = [
     id: "product-fabric-arc-lattice", sku: "RA-FB-2004", slug: "fabric-arc-lattice",
     title: L("طراحی پارچه — شبکه‌ی کمان", "Fabric design — Arc Lattice"),
     description: L("پارچه مبلی با الگوی هندسی آرت‌دکو؛ مس و سرمه‌ای برای مبلمان و پنل دیواری.", "Upholstery fabric with art-deco geometry — copper and navy for seating and wall panels."),
-    categoryId: "cat-geometric", patternId: "pattern-arc-lattice", artistId: "artist-arman-kian",
+    categoryId: "cat-geometric", familyId: "fam-home-fabric", patternId: "pattern-arc-lattice", artistId: "artist-arman-kian",
     price: { fa: 1250000, en: 58 },
     colors: [
       color("navy", "سرمه‌ای", "Navy", "#1b2e4b", "/images/colorways/al-navy.jpg"),
@@ -222,7 +222,7 @@ export const products: Product[] = [
     id: "product-curtain-quiet-garden", sku: "RA-CR-2005", slug: "curtain-quiet-garden",
     title: L("پرده — باغ آرام", "Curtain — Quiet Garden"),
     description: L("پرده کتان دو‌لایه با چاپ گیاهی ظریف؛ نور ملایم، آستر مات و دوخت سفارشی.", "Double-layer linen curtain with a soft botanical print; gentle light, blackout lining, made to measure."),
-    categoryId: "cat-botanical", patternId: "pattern-quiet-garden", artistId: null,
+    categoryId: "cat-botanical", familyId: "fam-curtain", patternId: "pattern-quiet-garden", artistId: null,
     price: { fa: 4200000, en: 195 },
     colors: [
       color("ivory", "عاجی", "Ivory", "#efe9dd", "/images/new/new-curtain-room.jpg"),
@@ -242,7 +242,7 @@ export const products: Product[] = [
     id: "product-curtain-copper-damask", sku: "RA-CR-2006", slug: "curtain-copper-damask",
     title: L("پرده مخمل — داماسک مسی", "Velvet curtain — Copper Damask"),
     description: L("پرده مخمل سنگین با نقش داماسک؛ عمق شبانه برای اتاق خواب و سالن پذیرایی لوکس.", "Heavy velvet curtain with damask motif — nocturnal depth for bedrooms and formal lounges."),
-    categoryId: "cat-luxury", patternId: "pattern-copper-damask", artistId: null,
+    categoryId: "cat-luxury", familyId: "fam-curtain", patternId: "pattern-copper-damask", artistId: null,
     price: { fa: 5800000, en: 265 },
     colors: [
       color("navy", "سرمه‌ای", "Navy", "#1b2e4b", "/images/products/curtain-velvet.jpg"),
@@ -262,7 +262,7 @@ export const products: Product[] = [
     id: "product-decor-cushion-set", sku: "RA-DC-2007", slug: "decor-cushion-set",
     title: L("ست دکور — کوسن‌های الگو", "Décor set — Pattern cushions"),
     description: L("ست سه‌تایی کوسن با الگوهای گیاهی و داماسک؛ ترکیب کتان و مخمل برای نشیمن کلاسیک.", "Set of three cushions in botanical and damask patterns — linen and velvet mix for a classical lounge."),
-    categoryId: "cat-botanical", patternId: "pattern-quiet-garden", artistId: null,
+    categoryId: "cat-botanical", familyId: "fam-cushion", patternId: "pattern-quiet-garden", artistId: null,
     price: { fa: 1890000, en: 86 }, compareAt: { fa: 2200000, en: 98 },
     colors: [
       color("mixed", "ترکیبی", "Mixed", "#c99a92", "/images/new/new-decor-set.jpg"),
@@ -302,7 +302,7 @@ export const products: Product[] = [
     id: "product-wallpaper-lapis-eslimi", sku: "RA-WP-2009", slug: "wallpaper-lapis-eslimi",
     title: L("کاغذدیواری — اسلیمی لاجورد", "Wallpaper — Lapis Eslimi"),
     description: L("کاغذدیواری با بازخوانی مینیمال نقش کاشی ایرانی؛ لاجورد و طلای کهنه برای فضاهای خاص.", "Wallpaper reinterpreting Persian tile ornament in lapis and antique gold — for distinctive interiors."),
-    categoryId: "cat-persian", patternId: "pattern-lapis-eslimi", artistId: "artist-hossein-tabrizi",
+    categoryId: "cat-persian", familyId: "fam-wallpaper", patternId: "pattern-lapis-eslimi", artistId: "artist-hossein-tabrizi",
     price: { fa: 2900000, en: 108 },
     colors: [
       color("lapis", "لاجورد", "Lapis", "#1f3a8a", "/images/colorways/le-lapis.jpg"),

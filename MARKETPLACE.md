@@ -208,7 +208,10 @@ bash scripts/marketplace-smoke/multipart-e2e.sh             # آپلود چند�
 مسیر پیشنهادی تست دستی (همه با داده‌ی واقعی اجرا شده است):
 
 1. **ورود ادمین** → `/admin/fa/marketplace` (اگر نشست نداشته باشید، به `/admin/login` هدایت می‌شوید).
-2. **آپلود** → `POST /api/marketplace/upload/session` با `{filename,sizeBytes,mime,title,…}`؛ سپس قطعه‌ها
+2. **آپلود** → `POST /api/marketplace/upload/session` با
+   `{filename,sizeBytes,mime,title,familyId,…}`؛ `familyId` یکی از هشت شناسه‌ی `src/lib/data/families.ts`
+   است و اگر نباشد/نامعتبر باشد پاسخ `invalid_family` (۴۰۰) می‌آید — فرم آپلود هنرمند آن را الزامی کرده و
+   پس از موفقیت، هنرمند خودکار به `/shop?family=<slug>` هدایت می‌شود؛ سپس قطعه‌ها
    به `/upload/part` و پایان با `/upload/complete`. (تست: PNG کاشی‌پذیر ۸۴۵٬۰۷۶ بایتی → امتیاز بی‌درز
    **۰.۹۸۲**، پنج موکاپ، اسکن `clean`.)
 3. **تأیید** → `POST /api/marketplace/admin/review {action:"approve",assetId,publish:true}` → اثر در

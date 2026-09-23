@@ -37,6 +37,7 @@ export default async function MarketplaceAssetPage({ params }: { params: Promise
     description: asset.description,
     kind: asset.kind,
     tags: asset.tags,
+    familyId: asset.familyId ?? null,
     status: asset.status,
     soldExclusive: asset.status === "sold_exclusive",
     purchasable: asset.status === "approved" && asset.visibility === "public",

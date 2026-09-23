@@ -20,6 +20,7 @@ import { useLocale } from "@/components/providers/AppProviders";
 import { Badge } from "@/components/ui/Badge";
 import { formatPrice, href } from "@/lib/utils";
 import { SESSION_FETCH } from "@/lib/http";
+import { familyName } from "@/lib/data/families";
 import type { PricePair } from "@/lib/marketplace/types";
 import type { Localized } from "@/lib/i18n/types";
 
@@ -37,6 +38,8 @@ interface StudioAsset {
   title: Localized;
   kind: string;
   tags: string[];
+  /** Product family chosen on upload (see `lib/data/families.ts`). */
+  familyId?: string | null;
   status: string;
   visibility: string;
   createdAt: string;
@@ -361,6 +364,7 @@ export function ArtistStudio({ locale }: { locale: "fa" | "en" }) {
                                   : "Sold exclusively"
                                 : asset.status}
                       </Badge>
+                      {asset.familyId && <Badge tone="neutral">{familyName(asset.familyId, locale)}</Badge>}
                       {asset.visibility === "private" && asset.status === "approved" && <Badge tone="outline">{fa ? "پنهان" : "Hidden"}</Badge>}
                     </div>
 

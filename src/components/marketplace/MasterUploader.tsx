@@ -1,10 +1,14 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, FileUp, Loader2, ShieldCheck, UploadCloud, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { AlertTriangle, Check, CheckCircle2, FileUp, Loader2, ShieldCheck, UploadCloud, X } from "lucide-react";
 import { useLocale } from "@/components/providers/AppProviders";
 import { Field, Input } from "@/components/ui/Input";
 import { SESSION_FETCH } from "@/lib/http";
+import { PRODUCT_FAMILIES, familyById } from "@/lib/data/families";
+import { cn, faNum, href } from "@/lib/utils";
 
 /**
  * Private master uploader.
@@ -61,7 +65,21 @@ export function MasterUploader({ onUploaded }: { onUploaded?: () => void }) {
   const [result, setResult] = useState<UploadResult | null>(null);
   const [dragging, setDragging] = useState(false);
 
-  const [meta, setMeta] = useState({ titleFa: "", titleEn: "", kind: "pattern", tags: "", descriptionFa: "" });
+  const router = useRouter();
+  const [meta, setMeta] = useState({
+    titleFa: "",
+    titleEn: "",
+    kind: "pattern",
+    tags: "",
+    descriptionFa: "",
+    /* The real product category — required, see `lib/data/families.ts`. */
+    familyId: "",
+  });
+  /** Countdown shown after a successful upload, before the category opens. */
+  const [redirectIn, setRedirectIn] = useState<number | null>(null);
+  const chosenFamily = familyById(meta.familyId);
+  const categoryHref = chosenFamily ? `${href(locale, "/shop")}?family=${chosenFamily.slug}` : null;
+  const ready = Boolean(file) && Boolean(chosenFamily) && meta.titleFa.trim().length > 0;
 
   const reset = () => {
     setFile(null);
@@ -69,6 +87,7 @@ export function MasterUploader({ onUploaded }: { onUploaded?: () => void }) {
     setProgress(0);
     setStatus("");
     setResult(null);
+    setRedirectIn(null);
     if (inputRef.current) inputRef.current.value = "";
   };
 
@@ -90,6 +109,7 @@ export function MasterUploader({ onUploaded }: { onUploaded?: () => void }) {
             title: { fa: meta.titleFa || target.name, en: meta.titleEn || target.name },
             description: { fa: meta.descriptionFa, en: "" },
             kind: meta.kind,
+            familyId: meta.familyId,
             tags: meta.tags
               .split(/[,،]/)
               .map((tag) => tag.trim())
@@ -214,8 +234,67 @@ export function MasterUploader({ onUploaded }: { onUploaded?: () => void }) {
 
   const busy = phase === "session" || phase === "uploading" || phase === "finalizing";
 
+  /* The artist lands on the category they picked — their new work is filed there. */
+  useEffect(() => {
+    if (!categoryHref || !result?.ok) return;
+    setRedirectIn(4);
+    const tick = setInterval(() => setRedirectIn((value) => (value === null ? null : Math.max(0, value - 1))), 1000);
+    const jump = setTimeout(() => router.push(categoryHref), 4000);
+    return () => {
+      clearInterval(tick);
+      clearTimeout(jump);
+    };
+  }, [categoryHref, result?.ok, router]);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <Field
+        label={fa ? "دسته‌بندی اصلی محصول" : "Main product category"}
+        hint={
+          fa
+            ? "محصول شما زیر همین دسته در فروشگاه دسته‌بندی می‌شود؛ بعد از ثبت، همین دسته باز می‌شود."
+            : "Your product is filed under this category in the shop — it opens right after the upload."
+        }
+      >
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" role="radiogroup" aria-label={fa ? "دسته‌بندی اصلی محصول" : "Main product category"}>
+          {PRODUCT_FAMILIES.map((family) => {
+            const active = meta.familyId === family.id;
+            return (
+              <button
+                key={family.id}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => setMeta({ ...meta, familyId: family.id })}
+                className={cn(
+                  "flex items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-start transition-all duration-200",
+                  active
+                    ? "border-accent bg-accent/10 shadow-soft"
+                    : "border-border bg-surface hover:border-foreground/40",
+                )}
+              >
+                <span className="min-w-0">
+                  <span className={cn("block truncate text-[13px]", active ? "font-semibold text-foreground" : "text-foreground-secondary")}>
+                    {family.name[locale] ?? family.name.fa}
+                  </span>
+                  <span className="block truncate text-[11px] text-muted" dir="ltr">
+                    {family.name.en}
+                  </span>
+                </span>
+                <span
+                  className={cn(
+                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors",
+                    active ? "border-accent bg-accent text-white" : "border-border",
+                  )}
+                >
+                  {active && <Check className="h-3 w-3" strokeWidth={3} />}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </Field>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label={fa ? "عنوان اثر (فارسی)" : "Title (Persian)"}>
           <Input value={meta.titleFa} onChange={(event) => setMeta({ ...meta, titleFa: event.target.value })} placeholder="الگوی اسلیمی" />
@@ -323,6 +402,11 @@ export function MasterUploader({ onUploaded }: { onUploaded?: () => void }) {
               {fa ? "کد اثر" : "Asset"}: <span dir="ltr">{result.asset.id}</span> · {fa ? "شناسه" : "slug"}:{" "}
               <span dir="ltr">{result.asset.slug}</span>
             </li>
+            {chosenFamily && (
+              <li>
+                {fa ? "دسته‌بندی" : "Category"}: <span className="font-medium text-foreground">{chosenFamily.name[locale] ?? chosenFamily.name.fa}</span>
+              </li>
+            )}
             <li>
               {fa ? "اسکن: " : "Scan: "}
               {result.asset.scan.engine} · {result.asset.scan.status}
@@ -335,6 +419,23 @@ export function MasterUploader({ onUploaded }: { onUploaded?: () => void }) {
               SHA-256: <span dir="ltr">{result.asset.master.sha256.slice(0, 24)}…</span>
             </li>
           </ul>
+
+          {categoryHref && (
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-success/20 pt-3">
+              <Link href={categoryHref} className="inline-flex items-center gap-1 text-caption font-semibold text-foreground underline-offset-4 hover:text-accent hover:underline">
+                {fa ? "مشاهده دسته‌بندی در فروشگاه" : "Open the category in the shop"}
+              </Link>
+              <span className="text-caption text-foreground-secondary">
+                {redirectIn === null
+                  ? fa
+                    ? "به‌زودی به همین دسته منتقل می‌شوید."
+                    : "Taking you to this category in a moment."
+                  : fa
+                    ? `انتقال خودکار به دسته‌بندی در ${faNum(redirectIn)} ثانیه…`
+                    : `Opening the category in ${redirectIn}s…`}
+              </span>
+            </div>
+          )}
         </div>
       )}
 
@@ -347,13 +448,21 @@ export function MasterUploader({ onUploaded }: { onUploaded?: () => void }) {
 
       <button
         type="button"
-        disabled={!file || busy}
+        disabled={!ready || busy}
         onClick={() => file && upload(file)}
         className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm text-background disabled:opacity-50"
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
         {fa ? "بارگذاری امن و ارسال برای بازبینی" : "Upload securely & submit for review"}
       </button>
+
+      {!ready && !busy && (
+        <p className="text-center text-caption text-muted">
+          {fa
+            ? "برای ارسال، دسته‌بندی اصلی، عنوان فارسی و فایل مادر لازم است."
+            : "A category, a Persian title and the master file are required to submit."}
+        </p>
+      )}
     </div>
   );
 }
