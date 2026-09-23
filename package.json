@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "postbuild": "node scripts/sync-standalone.mjs",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",

@@ -40,6 +40,21 @@ npm ci && npm run build && npm start
 # → http://localhost:3000/fa
 ```
 
+`npm run build` also runs `postbuild` (`scripts/sync-standalone.mjs`), which copies `public/`
+and `dist/.next/static/` into `dist/.next/standalone/` — `next build` does not do that itself, and
+without it the standalone server answers HTML while every stylesheet, script and image 404s.
+
+To run the standalone bundle instead of `next start`:
+
+```bash
+npm run build
+ADMIN_EMAIL=… ADMIN_PASSWORD=… AUTH_SECRET=… PORT=3000 HOSTNAME=0.0.0.0 \
+  node dist/.next/standalone/server.js      # it chdirs into dist/.next/standalone itself
+```
+
+If you ever build and then move things by hand, re-run `node scripts/sync-standalone.mjs` before
+starting the server.
+
 ## Structure
 
 ```
