@@ -11,6 +11,12 @@ npm run build && node dist/.next/standalone/server.js       # or: npm run dev
 # 2. seed a local artist account so the artist flows can be exercised
 DATA=dist/.next/standalone/data node scripts/marketplace-smoke/seed-artist-user.mjs
 
+# 2b. (optional) fill an empty store with two complete, sellable works, so the
+#     dashboard/storefront/buyer flow have something real to show — real files,
+#     uploaded through the real APIs, approved and priced
+node scripts/marketplace-smoke/mkformats.mjs /tmp/fmt
+DATA=dist/.next/standalone/data node scripts/marketplace-smoke/seed-demo-works.mjs
+
 # 3. run the checks (BASE defaults to http://localhost:3000,
 #    DATA defaults to dist/.next/standalone/data)
 bash scripts/marketplace-smoke/http-e2e.sh        # upload → review → buy → download → certificate
