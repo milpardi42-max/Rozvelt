@@ -19,6 +19,7 @@ import {
   Store,
   TrendingUp,
   Wallet,
+  type LucideIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { AssetStatusBadge, MiniBars, Money, bytesLabel } from "@/components/artist/DashboardParts";
@@ -491,7 +492,7 @@ function Kpi({
   hint,
   fa,
 }: {
-  icon: (props: { className?: string }) => React.ReactNode;
+  icon: LucideIcon;
   label: string;
   value: string;
   delta: number | null;
