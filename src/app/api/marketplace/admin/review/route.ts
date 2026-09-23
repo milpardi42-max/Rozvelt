@@ -1,6 +1,8 @@
 import { getReviewQueue, approveAsset, rejectAsset, delistAsset, relistAsset, regenerateDerivatives, rescanAsset, purgeAsset } from "@/lib/marketplace/admin";
 import { sendReviewNotice } from "@/lib/marketplace/email";
 import { fail, json, readJson, requireAdmin } from "@/lib/marketplace/guard";
+import { assetColourways, assetFormatIds, deliveryBytes } from "@/lib/marketplace/colourways";
+import { isDeliverableFormatId } from "@/lib/marketplace/formats";
 import type { LicenseTier } from "@/lib/marketplace/types";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +37,18 @@ export async function GET(request: Request) {
         seamless: item.asset.seamless,
         tiers: item.asset.tiers,
         revenueSharePct: item.asset.revenueSharePct,
+        /* What the buyer will receive — colourways, each with its formats. */
+        formats: assetFormatIds(item.asset),
+        deliveryBytes: deliveryBytes(item.asset),
+        colourways: assetColourways(item.asset).map((colourway) => ({
+          id: colourway.id,
+          name: colourway.name,
+          hex: colourway.hex,
+          preview: colourway.previewKey ?? null,
+          formats: colourway.files
+            .filter((file) => isDeliverableFormatId(file.formatId))
+            .map((file) => ({ formatId: file.formatId, filename: file.filename, sizeBytes: file.sizeBytes })),
+        })),
         media: {
           preview: item.asset.previewKey,
           tile: item.asset.tileKey,

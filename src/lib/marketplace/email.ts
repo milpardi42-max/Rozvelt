@@ -4,6 +4,8 @@ import { KEYS, mutateCollection, readCollection } from "./store";
 import { newId } from "./assets";
 import { signObjectToken } from "./storage";
 import { toPersianDigits } from "./pdf/text";
+import { assetColourways, assetDeliverables } from "./colourways";
+import { formatLabel } from "./formats";
 import type { Localized } from "@/lib/i18n/types";
 import type { License, MarketplaceOrder, OutboxMessage, Payout } from "./types";
 
@@ -231,6 +233,22 @@ export async function sendOrderDelivery(input: {
 
   const links = licenses.map((license) => ({ license, link: buildDeliveryLink(license, locale) }));
 
+  /* Tell the buyer exactly what is inside the box: formats and colour versions. */
+  const { getAssets } = await import("./assets");
+  const assetIndex = new Map((await getAssets()).map((asset) => [asset.id, asset]));
+
+  const contents = (licenseId: string): string => {
+    const asset = assetIndex.get(licenses.find((item) => item.id === licenseId)?.assetId ?? "");
+    if (!asset) return "";
+    const files = assetDeliverables(asset);
+    if (!files.length) return "";
+    const formats = [...new Set(files.map((item) => item.formatId))].map((id) => formatLabel(id, locale)).join(" · ");
+    const colours = assetColourways(asset).filter((colourway) => colourway.files.length).length;
+    return locale === "fa"
+      ? `فرمت‌های تحویل: ${formats}${colours > 1 ? ` · ${toPersianDigits(String(colours))} رنگ` : ""} (همه در پنل کاربری قابل دانلود است)`
+      : `Delivered formats: ${formats}${colours > 1 ? ` · ${colours} colours` : ""} (all downloadable from your account)`;
+  };
+
   const rows = links
     .map(
       ({ license, link }) => `
@@ -241,6 +259,7 @@ export async function sendOrderDelivery(input: {
             ${locale === "fa" ? "شماره گواهی" : "Certificate"}: ${license.serial} ·
             ${locale === "fa" ? "لایسنس" : "License"}: ${license.licenseKind}
           </p>
+          ${contents(license.id) ? `<p style="margin:4px 0 0;font-size:12px;color:#667085">${contents(license.id)}</p>` : ""}
           <p style="margin:8px 0 0"><a href="${link.url}" style="color:${BRAND};font-weight:600">${
             locale === "fa" ? "دانلود فایل" : "Download file"
           }</a></p>

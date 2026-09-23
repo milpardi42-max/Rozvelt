@@ -69,6 +69,14 @@ function seededRandom(seed: number) {
   };
 }
 
+/** Standard watermark copy — one place so previews never drift apart. */
+export const WATERMARK_LINES = ["Rosie Atelier", "PREVIEW", "رزی آتلیه"];
+
+/** Short, readable tag burned into each preview so leaks are traceable. */
+export function cornerTagFor(assetId: string): string {
+  return assetId.slice(0, 12).toUpperCase();
+}
+
 export const PREVIEW_MAX = 1600;
 export const THUMB_MAX = 640;
 export const MOCKUP_SIZE = 1200;
@@ -558,6 +566,41 @@ export async function buildDerivatives(input: {
   }
 
   return { derivatives: out, mockups, previewKey: derivedKey(assetId, previewName), tileKey: derivedKey(assetId, tileName), seamless };
+}
+
+/**
+ * Pixel size of a raster file, or null when it is not one (PSD/PDF/SVG…).
+ * Best-effort: the uploader stores the size when sharp can read it.
+ */
+export async function readImageSize(source: Buffer): Promise<{ width: number; height: number } | null> {
+  try {
+    const sharp = await loadSharp();
+    if (!sharp) return null;
+    const meta = await sharp(source, { failOn: "none" }).metadata();
+    if (!meta.width || !meta.height) return null;
+    return { width: meta.width, height: meta.height };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Watermarked public preview for one colourway of an asset.
+ *
+ * The primary preview comes out of `buildDerivatives`; this is the same
+ * treatment applied to the extra colour versions an artist uploads, so every
+ * swatch in the gallery shows real, protected artwork.
+ */
+export async function renderColourwayPreview(
+  source: Buffer,
+  options: { assetId: string; format?: "jpeg" | "png" } = { assetId: "" },
+): Promise<{ buffer: Buffer; width: number; height: number }> {
+  return renderWatermarked(source, {
+    lines: WATERMARK_LINES,
+    cornerTag: options.assetId ? cornerTagFor(options.assetId) : undefined,
+    maxWidth: PREVIEW_MAX,
+    format: options.format ?? "jpeg",
+  });
 }
 
 /** Buyer-specific watermarked comp (used for pre-payment approval flows). */

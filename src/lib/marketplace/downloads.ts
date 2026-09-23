@@ -13,7 +13,9 @@ import {
   verifyObjectToken,
   type ObjectTokenPayload,
 } from "./storage";
-import type { Asset, License } from "./types";
+import { assetDeliverables, assetDownloadableKeys, type DeliverableRef } from "./colourways";
+import { formatById, type DeliverableFormatId } from "./formats";
+import type { Asset, ColourwayFile, License } from "./types";
 
 /**
  * Signed, audited downloads.
@@ -40,6 +42,13 @@ export interface DownloadTokenOptions {
   source?: "account" | "email" | "api" | "admin";
   /** Override the file name offered to the buyer. */
   filename?: string;
+  /**
+   * Which deliverable of the work this token unlocks. Omitted → the primary
+   * master, which is what every pre-existing token does.
+   */
+  file?: ColourwayFile | null;
+  /** Colourway a file belongs to, used only to name the download nicely. */
+  colourwayName?: { fa: string; en: string } | null;
 }
 
 export interface ResolvedDownload {
@@ -61,16 +70,27 @@ export type DownloadError =
   | "quota_exceeded"
   | "asset_missing"
   | "object_missing"
-  | "storage_error";
+  | "storage_error"
+  /** The token names a file that is not part of the licensed work. */
+  | "file_forbidden";
 
 /* ------------------------------------------------------------------ */
 /* Token issuing                                                       */
 /* ------------------------------------------------------------------ */
 
 export function createDownloadToken(license: License, asset: Asset, options: DownloadTokenOptions = {}): string {
-  const filename = options.filename ?? masterFilename(asset);
+  const file = options.file ?? null;
+  const filename =
+    options.filename ??
+    (file
+      ? deliverableFilename(asset, {
+          file,
+          formatId: file.formatId as DeliverableFormatId,
+          colourwayName: options.colourwayName ?? { fa: "", en: "" },
+        })
+      : masterFilename(asset));
   return signObjectToken({
-    k: asset.master.key,
+    k: file?.key ?? asset.master.key,
     exp: Math.floor(Date.now() / 1000) + (options.ttl ?? DOWNLOAD_TOKEN_TTL_S),
     lic: license.id,
     uid: license.buyerUserId ?? undefined,
@@ -91,6 +111,24 @@ export function masterFilename(asset: Asset): string {
     .slice(0, 60);
   const ext = asset.master.filename.split(".").pop() ?? "bin";
   return `${base}-${asset.id.slice(-6)}.${ext}`;
+}
+
+/**
+ * Name the buyer sees in their downloads folder: work, colour version and
+ * format — `Quiet-Garden-rose-PSD.psd`. Falls back to the stored file name.
+ */
+export function deliverableFilename(asset: Asset, ref: Pick<DeliverableRef, "file" | "formatId" | "colourwayName">): string {
+  const format = formatById(ref.formatId);
+  const base = (asset.title.en || asset.title.fa || asset.slug)
+    .replace(/[^\p{L}\p{N}._-]+/gu, "-")
+    .replace(/-+/g, "-")
+    .slice(0, 48);
+  const colourway = (ref.colourwayName?.en || ref.colourwayName?.fa || "")
+    .replace(/[^\p{L}\p{N}._-]+/gu, "-")
+    .replace(/-+/g, "-")
+    .slice(0, 24);
+  const suffix = [colourway, format?.label.en ?? ref.formatId].filter(Boolean).join("-");
+  return `${[base, suffix].filter(Boolean).join("-")}.${format?.ext ?? "bin"}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -149,7 +187,14 @@ export async function redeemDownloadToken(token: string, options: RedeemOptions 
   const asset = await getAsset(license.assetId);
   if (!asset) return { ok: false, error: "asset_missing", license };
 
-  const exists = await objectExists(asset.master.key);
+  /* A token may only name one of the work's own colourway files. The old
+     `k = assetId` tokens from queued emails are remapped to the master. */
+  const objectKey = payload.k && payload.k !== asset.id ? payload.k : asset.master.key;
+  if (!assetDownloadableKeys(asset).has(objectKey)) {
+    return { ok: false, error: "invalid_token", license };
+  }
+
+  const exists = await objectExists(objectKey);
   if (!exists) return { ok: false, error: "object_missing", license };
 
   // Record the download *before* streaming so a broken connection cannot be
@@ -165,13 +210,15 @@ export async function redeemDownloadToken(token: string, options: RedeemOptions 
   const filename = payload.fn ? `${payload.fn}` : masterFilename(asset);
   const disposition = payload.d === "inline" ? "inline" : "attachment";
 
-  const presigned = presignDownload(asset.master.key, { expiresIn: DOWNLOAD_TOKEN_TTL_S, filename });
+  const objectSize = assetDeliverables(asset).find((item) => item.file.key === objectKey)?.file.sizeBytes ?? asset.master.sizeBytes;
+
+  const presigned = presignDownload(objectKey, { expiresIn: DOWNLOAD_TOKEN_TTL_S, filename });
   if (presigned) {
-    return { ok: true, license, asset, stream: { body: new ReadableStream(), size: asset.master.sizeBytes }, filename, disposition, redirectUrl: presigned };
+    return { ok: true, license, asset, stream: { body: new ReadableStream(), size: objectSize }, filename, disposition, redirectUrl: presigned };
   }
 
   try {
-    const stream = await getStream(asset.master.key);
+    const stream = await getStream(objectKey);
     return { ok: true, license, asset, stream: { body: stream.body, size: stream.size }, filename, disposition };
   } catch {
     return { ok: false, error: "storage_error", license };

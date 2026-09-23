@@ -4,6 +4,7 @@ import { BadgeCheck, Download, FileArchive, ShieldCheck, Sparkles } from "lucide
 import { MarketplaceCatalog, type CatalogAsset } from "@/components/marketplace/MarketplaceCatalog";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { listPublicAssets } from "@/lib/marketplace/assets";
+import { assetColourways, assetFormatIds } from "@/lib/marketplace/colourways";
 import { trackReferralClick } from "@/lib/marketplace/analytics";
 import { getCoupon } from "@/lib/marketplace/orders";
 import { SUBSCRIPTION_PLANS } from "@/lib/marketplace/config";
@@ -153,6 +154,8 @@ export default async function MarketplacePage({
               mockups: asset.mockups.map((file) => ({ key: file.key, kind: file.kind, variant: file.variant })),
             },
             seamless: { verdict: asset.seamless.verdict, score: asset.seamless.score, tileable: asset.seamless.tileable },
+            formats: assetFormatIds(asset),
+            colourways: assetColourways(asset).map((colourway) => ({ hex: colourway.hex, name: colourway.name })),
           }),
         )}
       />

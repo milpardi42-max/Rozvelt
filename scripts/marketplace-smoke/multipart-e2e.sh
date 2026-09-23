@@ -25,7 +25,7 @@ echo "bytes=$SIZE sha256=$SHA"
 
 step "3. upload session"
 SESSION=$(curl -s -c $J -b $J -X POST $BASE/api/marketplace/upload/session -H 'content-type: application/json' \
-  -d "{\"filename\":\"granite-noise.png\",\"sizeBytes\":$SIZE,\"mime\":\"image/png\",\"title\":{\"fa\":\"بافت گرانیت\",\"en\":\"Granite noise\"},\"description\":{\"fa\":\"بافت بی‌درز پرجزئیات\",\"en\":\"High-detail seamless texture\"},\"kind\":\"texture\",\"tags\":[\"seamless\",\"noise\"],\"familyId\":\"fam-wallpaper\"}")
+  -d "{\"filename\":\"granite-noise.png\",\"sizeBytes\":$SIZE,\"mime\":\"image/png\",\"title\":{\"fa\":\"بافت گرانیت\",\"en\":\"Granite noise\"},\"description\":{\"fa\":\"بافت بی‌درز پرجزئیات\",\"en\":\"High-detail seamless texture\"},\"kind\":\"texture\",\"tags\":[\"seamless\",\"noise\"],\"familyId\":\"fam-wallpaper\",\"formatId\":\"png\",\"colourwayId\":\"cw-granite\",\"colourway\":{\"name\":{\"fa\":\"گرانیت\",\"en\":\"Granite\"},\"hex\":\"#334155\"}}")
 echo "$SESSION" | head -c 500
 SID=$(echo "$SESSION" | python3 -c "import sys,json;print(json.load(sys.stdin)['session']['id'])")
 MODE=$(echo "$SESSION" | python3 -c "import sys,json;print(json.load(sys.stdin)['session']['mode'])")

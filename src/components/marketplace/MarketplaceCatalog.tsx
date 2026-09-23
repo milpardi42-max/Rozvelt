@@ -8,6 +8,7 @@ import { Check, Layers, Plus, Search, ShoppingBag, Sparkles, X } from "lucide-re
 import { useMarketplaceCart } from "@/components/marketplace/MarketplaceCart";
 import { Badge } from "@/components/ui/Badge";
 import { formatPrice, href, t } from "@/lib/utils";
+import { formatLabel } from "@/lib/marketplace/formats";
 import type { Locale } from "@/lib/i18n/types";
 import type { AssetKind, LicenseTier, PricePair } from "@/lib/marketplace/types";
 
@@ -27,6 +28,9 @@ export interface CatalogAsset {
   tiers: LicenseTier[];
   media: { preview: string | null; tile: string | null; thumbs: string[]; mockups: { key: string; kind: string; variant?: string }[] };
   seamless: { verdict: string; score: number; tileable: boolean };
+  /** Delivered formats (PNG, PSD, AI…) and the colour versions of the work. */
+  formats?: string[];
+  colourways?: { hex: string; name: { fa: string; en: string } }[];
 }
 
 /**
@@ -227,6 +231,33 @@ export function MarketplaceCatalog({ locale, initial }: Props) {
                   {asset.stats.sales > 0 && asset.fromPrice ? " · " : ""}
                   {asset.fromPrice ? (fa ? `از ${formatPrice(asset.fromPrice, locale)}` : `from ${formatPrice(asset.fromPrice, locale)}`) : ""}
                 </p>
+
+                {((asset.formats?.length ?? 0) > 0 || (asset.colourways?.length ?? 0) > 1) && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {asset.colourways && asset.colourways.length > 1 && (
+                      <span className="flex items-center gap-1" title={fa ? "رنگ‌بندی‌ها" : "Colourways"}>
+                        {asset.colourways.slice(0, 6).map((colourway) => (
+                          <span
+                            key={colourway.hex + colourway.name.en}
+                            className="h-3.5 w-3.5 rounded-full border border-border"
+                            style={{ background: colourway.hex }}
+                            aria-label={colourway.name[locale] ?? colourway.name.fa}
+                          />
+                        ))}
+                        {asset.colourways.length > 6 && (
+                          <span className="text-[10px] text-muted" dir="ltr">
+                            +{asset.colourways.length - 6}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                    {asset.formats && asset.formats.length > 0 && (
+                      <span className="truncate text-[11px] text-foreground-secondary" dir="ltr">
+                        {asset.formats.map((id) => formatLabel(id, locale)).join(" · ")}
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {asset.status === "sold_exclusive" ? (
                   <p className="mt-3 rounded-lg bg-background-secondary px-3 py-2 text-caption text-foreground-secondary">

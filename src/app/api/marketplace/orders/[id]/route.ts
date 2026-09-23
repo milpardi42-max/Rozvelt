@@ -1,6 +1,8 @@
 import { getSession } from "@/lib/auth";
 import { getAsset } from "@/lib/marketplace/assets";
-import { createDownloadToken, licenseQuota } from "@/lib/marketplace/downloads";
+import { createDownloadToken, deliverableFilename, licenseQuota } from "@/lib/marketplace/downloads";
+import { assetColourways, assetDeliverables, deliveryBytes } from "@/lib/marketplace/colourways";
+import { formatLabel } from "@/lib/marketplace/formats";
 import { defaultTiers } from "@/lib/marketplace/config";
 import { getLicenses, getOrder } from "@/lib/marketplace/orders";
 import { getAttemptsByOrder } from "@/lib/marketplace/payments";
@@ -54,6 +56,29 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
           asset && license.status === "active" && quota.canDownload
             ? `/api/marketplace/download?token=${encodeURIComponent(createDownloadToken(license, asset, { source: "account" }))}`
             : null,
+        /* Guest-friendly: the receipt shows every format/colour of the purchase. */
+        files:
+          asset && license.status === "active" && quota.canDownload
+            ? assetDeliverables(asset).map((item) => ({
+                id: item.file.id,
+                formatId: item.formatId,
+                formatLabel: { fa: formatLabel(item.formatId, "fa"), en: formatLabel(item.formatId, "en") },
+                colourwayId: item.colourwayId,
+                colourwayName: item.colourwayName,
+                hex: item.hex,
+                filename: deliverableFilename(asset, item),
+                sizeBytes: item.file.sizeBytes,
+                url: `/api/marketplace/download?token=${encodeURIComponent(
+                  createDownloadToken(license, asset, { source: "account", file: item.file, colourwayName: item.colourwayName }),
+                )}`,
+              }))
+            : [],
+        deliveryBytes: asset ? deliveryBytes(asset) : 0,
+        colourways: asset
+          ? assetColourways(asset)
+              .filter((colourway) => colourway.files.length)
+              .map((colourway) => ({ id: colourway.id, name: colourway.name, hex: colourway.hex, formats: colourway.files.map((file) => file.formatId) }))
+          : [],
         quota: {
           used: quota.used,
           limit: quota.limit,

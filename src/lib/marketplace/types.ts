@@ -12,6 +12,7 @@
  */
 
 import type { Localized } from "@/lib/i18n/types";
+import type { DeliverableFormatId, ExportFormatId } from "./formats";
 
 export type ID = string;
 
@@ -142,6 +143,43 @@ export interface AssetStats {
   lastSaleAt?: string;
 }
 
+/**
+ * One stored deliverable: the bytes behind a single (colourway, format) pair.
+ *
+ * Every file lives in private storage; the buyer only ever sees it through a
+ * signed, quota-counted download.
+ */
+export interface ColourwayFile {
+  id: ID;
+  /** Which deliverable this file is — see `lib/marketplace/formats.ts`. */
+  formatId: DeliverableFormatId | ExportFormatId;
+  key: string;
+  provider: StorageProvider;
+  filename: string;
+  mime: string;
+  sizeBytes: number;
+  /** sha256 hex — integrity check and duplicate detection. */
+  sha256: string;
+  width?: number;
+  height?: number;
+  /** Set when the artist supplied this file as the storefront cover. */
+  cover?: boolean;
+  uploadedAt: string;
+}
+
+/** A colour version of one design (`رنگ‌بندی`): name, swatch and its own files. */
+export interface Colourway {
+  id: ID;
+  name: Localized;
+  /** `#rrggbb` swatch used in the uploader, the shop and the license vault. */
+  hex: string;
+  files: ColourwayFile[];
+  /** Watermarked public preview of *this* colour (`private/derived/…`). */
+  previewKey?: string | null;
+  order: number;
+  createdAt: string;
+}
+
 export interface Asset {
   id: ID;
   /** Owning account (artist user id) — null for site-owned assets. */
@@ -163,8 +201,14 @@ export interface Asset {
    */
   familyId?: ID | null;
 
-  /** The private master file (full resolution, clean). */
+  /** The private master file (full resolution, clean) — the primary raster. */
   master: StoredFile;
+  /**
+   * Colourways of this design, each holding its own deliverable files
+   * (PNG/JPG/AI/PSD/SVG/EPS). Empty/absent on legacy assets, which
+   * `lib/marketplace/colourways.ts` presents as a single default colourway.
+   */
+  colourways?: Colourway[];
   /** Small preview used on the storefront (watermarked). */
   previewKey?: string;
   /** Public derivative set. */
@@ -187,6 +231,8 @@ export interface Asset {
     reviewedBy?: string;
     reviewedAt?: string;
     note?: string;
+    /** Set when the artist added colourways/files after approval. */
+    filesUpdatedAt?: string;
   };
   rejectionNote?: string;
 
@@ -215,6 +261,16 @@ export interface UploadSession {
   /** Filesystem staging dir (local provider) or S3 uploadId, per provider. */
   staging?: string;
   s3UploadId?: string;
+  /**
+   * Which deliverable this session carries, and which colourway of which asset
+   * it belongs to. The first file of a work creates the asset; every following
+   * file is attached to it via `attachToAssetId`.
+   */
+  formatId?: ExportFormatId;
+  colourwayId?: ID;
+  /** Name and swatch used when this session introduces a new colourway. */
+  colourway?: { name: Localized; hex: string } | null;
+  attachToAssetId?: ID | null;
   /** Metadata collected in the upload form. */
   meta: {
     title: Localized;

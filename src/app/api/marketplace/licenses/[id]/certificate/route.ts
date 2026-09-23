@@ -6,6 +6,8 @@ import { generateLicenseCertificate } from "@/lib/marketplace/pdf/certificate";
 import { defaultTiers, siteUrl } from "@/lib/marketplace/config";
 import { getSession } from "@/lib/auth";
 import { verifyObjectToken } from "@/lib/marketplace/storage";
+import { assetFormatIds } from "@/lib/marketplace/colourways";
+import { formatListLabel } from "@/lib/marketplace/formats";
 import type { CertificateInput } from "@/lib/marketplace/pdf/certificate";
 
 export const dynamic = "force-dynamic";
@@ -81,6 +83,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       title: license.title,
       sku: asset?.slug ? asset.slug.toUpperCase() : undefined,
       kind: asset?.kind,
+      formats: asset
+        ? (() => {
+            const ids = assetFormatIds(asset);
+            if (!ids.length) return null;
+            return { fa: formatListLabel(ids, "fa"), en: formatListLabel(ids, "en") };
+          })()
+        : null,
     },
     artist: { name: license.artistName },
     buyer: {

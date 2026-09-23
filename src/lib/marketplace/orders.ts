@@ -10,6 +10,7 @@ import {
   getPlan,
 } from "./config";
 import { getAsset, nextLicenseSerial, recordAssetSale } from "./assets";
+import { assetDeliverables } from "./colourways";
 import { appendLedger } from "./assets";
 import type { Localized } from "@/lib/i18n/types";
 import type {
@@ -645,7 +646,12 @@ export async function fulfillOrder(
       pricePaid: line.price,
       royalty: { pct: sharePct, amount: split.artist, platformFee: split.platform },
       issuedAt: new Date().toISOString(),
-      maxDownloads: tier?.maxDownloads ?? 5,
+      /**
+       * A license must cover the whole delivery: a work with six formats across
+       * three colours is twelve files, so the allowance is never smaller than
+       * the number of files (plus the tier's own re-download allowance).
+       */
+      maxDownloads: Math.max(tier?.maxDownloads ?? 5, assetDeliverables(asset).length),
       downloads: [],
       status: "active",
     };

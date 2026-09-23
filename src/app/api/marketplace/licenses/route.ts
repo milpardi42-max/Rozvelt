@@ -1,5 +1,7 @@
 import { getLicensesForArtist, getLicensesForUser, getLicenses as all } from "@/lib/marketplace/orders";
-import { createDownloadToken, licenseQuota } from "@/lib/marketplace/downloads";
+import { createDownloadToken, deliverableFilename, licenseQuota } from "@/lib/marketplace/downloads";
+import { assetColourways, assetDeliverables, deliveryBytes } from "@/lib/marketplace/colourways";
+import { formatLabel } from "@/lib/marketplace/formats";
 import { getAssets } from "@/lib/marketplace/assets";
 import { json, session } from "@/lib/marketplace/guard";
 
@@ -34,6 +36,25 @@ export async function GET(request: Request) {
     licenses: licenses.map((license) => {
       const asset = assetIndex.get(license.assetId);
       const quota = licenseQuota(license);
+      const deliverable = asset && license.status === "active" && quota.canDownload
+        ? assetDeliverables(asset).map((item) => ({
+            id: item.file.id,
+            formatId: item.formatId,
+            formatLabel: { fa: formatLabel(item.formatId, "fa"), en: formatLabel(item.formatId, "en") },
+            colourwayId: item.colourwayId,
+            colourwayName: item.colourwayName,
+            hex: item.hex,
+            filename: deliverableFilename(asset, item),
+            sizeBytes: item.file.sizeBytes,
+            mime: item.file.mime,
+            width: item.file.width ?? null,
+            height: item.file.height ?? null,
+            /** Signed per file — one download of one format burns one credit. */
+            url: `/api/marketplace/download?token=${encodeURIComponent(
+              createDownloadToken(license, asset, { source: "account", file: item.file, colourwayName: item.colourwayName }),
+            )}`,
+          }))
+        : [];
       return {
         id: license.id,
         serial: license.serial,
@@ -56,6 +77,22 @@ export async function GET(request: Request) {
           asset && license.status === "active" && quota.canDownload
             ? `/api/marketplace/download?token=${encodeURIComponent(createDownloadToken(license, asset, { source: "account" }))}`
             : null,
+        /** Everything this license delivers, colourway by colourway. */
+        files: deliverable,
+        image: asset?.previewKey ?? null,
+        deliveryBytes: asset ? deliveryBytes(asset) : 0,
+        colourways:
+          asset && license.status === "active"
+            ? assetColourways(asset).map((colourway) => ({
+                id: colourway.id,
+                name: colourway.name,
+                hex: colourway.hex,
+                preview: colourway.previewKey ?? null,
+                formats: colourway.files
+                  .filter((file) => assetDeliverables(asset).some((item) => item.file.id === file.id))
+                  .map((file) => file.formatId),
+              }))
+            : [],
         certificateUrl: `/api/marketplace/licenses/${license.id}/certificate`,
         verifyUrl: `/api/marketplace/verify/${license.serial}`,
       };

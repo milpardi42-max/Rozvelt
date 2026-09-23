@@ -2,6 +2,7 @@ import { bumpAssetViews, filterAssets, getAsset, getAssets, isPurchasable, listP
 import { hasRtl } from "@/lib/marketplace/pdf/textpath";
 import { recordEvent } from "@/lib/marketplace/analytics";
 import { json, numberParam } from "@/lib/marketplace/guard";
+import { assetColourways, assetFormatIds } from "@/lib/marketplace/colourways";
 import type { Asset } from "@/lib/marketplace/types";
 
 export const dynamic = "force-dynamic";
@@ -95,6 +96,8 @@ function present(asset: Asset, full: boolean) {
       thumbs: asset.derivatives.filter((file) => file.kind === "thumb").map((file) => file.key),
       mockups: full ? asset.mockups.map((file) => ({ key: file.key, kind: file.kind, variant: file.variant })) : [],
     },
+    formats: assetFormatIds(asset),
+    colourways: assetColourways(asset).map((colourway) => ({ hex: colourway.hex, name: colourway.name })),
     seamless: {
       verdict: asset.seamless.verdict,
       score: asset.seamless.score,

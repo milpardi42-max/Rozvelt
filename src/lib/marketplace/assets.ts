@@ -3,7 +3,6 @@ import crypto from "crypto";
 import {
   DEFAULT_ARTIST_SHARE_PCT,
   MAX_MASTER_BYTES,
-  MIN_MASTER_BYTES,
   MULTIPART_PART_SIZE,
   MULTIPART_THRESHOLD_BYTES,
   acceptedMasterMime,
@@ -11,18 +10,23 @@ import {
   storageProvider,
 } from "./config";
 import { KEYS, mutateCollection, readCollection, readDoc, writeDoc, nextSequence } from "./store";
-import { deleteObject, masterKey, putBuffer, stagedMasterKey, stagingPrefix } from "./storage";
+import { deleteObject, deliverableKey, derivedKey, masterKey, putBuffer, stagedMasterKey, stagingPrefix } from "./storage";
 import { scanBuffer, sha256 } from "./scanner";
-import { buildDerivatives } from "./media";
+import { WATERMARK_LINES, buildDerivatives, cornerTagFor, readImageSize, renderColourwayPreview } from "./media";
+import { detectFormat, formatById, formatStoredMime, minUploadBytes, verifyFileSignature, type ExportFormatId } from "./formats";
+import { DEFAULT_COLOURWAY_ID, sanitizeHex } from "./colourways";
 import { refundPrice } from "./royalty";
 import type { Localized } from "@/lib/i18n/types";
 import type {
   Asset,
   AssetKind,
   AssetStatus,
+  Colourway,
+  ColourwayFile,
   LedgerEntry,
   LicenseTier,
   PricePair,
+  ScanReport,
   SeamlessReport,
   UploadSession,
 } from "./types";
@@ -277,13 +281,24 @@ export interface CreateSessionInput {
   mime: string;
   sizeBytes: number;
   meta?: Partial<UploadSession["meta"]>;
+  /** Deliverable this file is (PNG/JPG/preview/AI/PSD/SVG/EPS). */
+  formatId?: ExportFormatId;
+  /** Colour version this file belongs to. */
+  colourwayId?: string;
+  /** Name + swatch, used when the session introduces a new colourway. */
+  colourway?: { name: Localized; hex: string } | null;
+  /** Attach the finished file to an existing work (colourways 2..n). */
+  attachToAssetId?: string | null;
 }
 
 export async function createUploadSession(input: CreateSessionInput): Promise<UploadSession> {
-  const ext = acceptedMasterMime(input.mime) ?? "bin";
+  /* The chosen format owns the extension (`ai`/`eps`/`psd` are reported through
+     several MIME aliases), with the MIME table as the fallback. */
+  const format = formatById(input.formatId);
+  const ext = format?.ext ?? acceptedMasterMime(input.mime) ?? "bin";
   const sizeBytes = Math.max(0, Math.floor(input.sizeBytes));
 
-  if (sizeBytes < MIN_MASTER_BYTES) throw new Error("file_too_small");
+  if (sizeBytes < minUploadBytes(input.formatId)) throw new Error("file_too_small");
   if (sizeBytes > MAX_MASTER_BYTES) throw new Error("file_too_large");
 
   const id = newId("upl");
@@ -304,6 +319,12 @@ export async function createUploadSession(input: CreateSessionInput): Promise<Up
     partSize: MULTIPART_PART_SIZE,
     parts: [],
     staging: multipart ? id : undefined,
+    formatId: input.formatId,
+    colourwayId: input.colourwayId,
+    colourway: input.colourway
+      ? { name: input.colourway.name, hex: sanitizeHex(input.colourway.hex) }
+      : null,
+    attachToAssetId: input.attachToAssetId ?? null,
     meta: {
       title: input.meta?.title ?? { fa: input.filename, en: input.filename },
       description: input.meta?.description ?? { fa: "", en: "" },
@@ -394,28 +415,44 @@ export async function completeUpload(
   options: CompleteUploadOptions = {},
 ): Promise<CompletedUpload> {
   const onStage = options.onStage ?? (() => undefined);
-  const ext = acceptedMasterMime(session.mime) ?? "bin";
+  /* The format the artist picked wins; a legacy client without one falls back to
+     sniffing the file name, so old bookmarklets/scripts keep working. */
+  const formatId: ExportFormatId = session.formatId ?? detectFormat(session.filename, session.mime)?.id ?? "png";
+  const ext = formatById(formatId)?.ext ?? acceptedMasterMime(session.mime) ?? "bin";
+  const colourwayId = session.colourwayId ?? DEFAULT_COLOURWAY_ID;
 
   onStage("storing_master");
-  const assetId = newId("ast");
+  /* The first file of a work mints the asset id; every later file is stored
+     inside the asset it belongs to (`private/masters/<assetId>/<colourway>/…`). */
+  const assetId = session.attachToAssetId ?? newId("ast");
+  const masterStoredKey = session.attachToAssetId
+    ? deliverableKey(assetId, colourwayId, formatId, Date.now().toString(36), ext)
+    : masterKey(assetId, ext);
 
   let masterBuffer: Buffer;
-  let masterStoredKey: string;
   if (session.mode === "single") {
     if (!options.buffer) throw new Error("missing_body");
     masterBuffer = options.buffer;
-    masterStoredKey = masterKey(assetId, ext);
-    await putBuffer(masterStoredKey, masterBuffer, session.mime);
+    await putBuffer(masterStoredKey, masterBuffer, formatStoredMime(formatId));
   } else {
     const { assembleParts, getBuffer: readObject } = await import("./storage");
-    const finalKey = masterKey(assetId, ext);
     const partNumbers = session.parts
       .map((part) => part.partNumber)
       .sort((a, b) => a - b);
     if (!partNumbers.length) throw new Error("no_parts");
-    await assembleParts(session.id, partNumbers, finalKey, session.mime);
-    masterBuffer = await readObject(finalKey);
-    masterStoredKey = finalKey;
+    await assembleParts(session.id, partNumbers, masterStoredKey, formatStoredMime(formatId));
+    masterBuffer = await readObject(masterStoredKey);
+  }
+
+  if (masterBuffer.byteLength < minUploadBytes(formatId)) {
+    await deleteObject(masterStoredKey).catch(() => undefined);
+    throw Object.assign(new Error("file_too_small"), { minBytes: minUploadBytes(formatId) });
+  }
+
+  /* The extension and the MIME come from the client — the header does not. */
+  if (!verifyFileSignature(formatId, masterBuffer)) {
+    await deleteObject(masterStoredKey).catch(() => undefined);
+    throw Object.assign(new Error("invalid_signature"), { formatId });
   }
 
   onStage("scanning");
@@ -426,20 +463,57 @@ export async function completeUpload(
     throw Object.assign(new Error("infected"), { scan });
   }
 
+  /* ---------- colourway 2..n: attach the file to an existing work ---------- */
+  if (session.attachToAssetId) {
+    return attachUploadToAsset(session, {
+      assetId,
+      formatId,
+      colourwayId,
+      key: masterStoredKey,
+      buffer: masterBuffer,
+      scan,
+    });
+  }
+
   onStage("derivatives");
-  const artistName = session.meta.title.en || session.meta.title.fa;
   let derivation: Awaited<ReturnType<typeof buildDerivatives>> | null = null;
   try {
     derivation = await buildDerivatives({
       assetId,
       master: masterBuffer,
-      watermarkLines: ["Rosie Atelier", "PREVIEW", "رزی آتلیه"],
-      cornerTag: assetId.slice(0, 12).toUpperCase(),
+      watermarkLines: WATERMARK_LINES,
+      cornerTag: cornerTagFor(assetId),
     });
   } catch (error) {
     // Imaging is best-effort: a TIFF/PDF master still becomes a reviewable asset.
     console.error("[marketplace] derivative generation failed:", error);
   }
+
+  const size = formatById(formatId)?.raster ? await readImageSize(masterBuffer) : null;
+  const colourway: Colourway = {
+    id: colourwayId,
+    name: session.colourway?.name ?? { fa: "رنگ اصلی", en: "Original" },
+    hex: sanitizeHex(session.colourway?.hex),
+    files: [
+      {
+        id: newId("asf"),
+        formatId,
+        key: masterStoredKey,
+        provider: session.provider,
+        filename: session.filename,
+        mime: formatStoredMime(formatId),
+        sizeBytes: masterBuffer.byteLength,
+        sha256: sha256(masterBuffer),
+        width: size?.width,
+        height: size?.height,
+        cover: formatId === "preview" || undefined,
+        uploadedAt: new Date().toISOString(),
+      },
+    ],
+    previewKey: derivation?.previewKey ?? null,
+    order: 0,
+    createdAt: new Date().toISOString(),
+  };
 
   const asset: Asset = {
     id: assetId,
@@ -457,10 +531,11 @@ export async function completeUpload(
       provider: session.provider,
       filename: session.filename,
       sizeBytes: masterBuffer.byteLength,
-      mime: session.mime,
+      mime: formatStoredMime(formatId),
       sha256: sha256(masterBuffer),
       uploadedAt: new Date().toISOString(),
     },
+    colourways: [colourway],
     previewKey: derivation?.previewKey,
     tileKey: derivation?.tileKey,
     derivatives: derivation?.derivatives ?? [],
@@ -499,8 +574,152 @@ export async function completeUpload(
     result: undefined,
   }));
 
-  void artistName;
+  const fileCount = 1;
+  void fileCount;
   return { asset, scan, seamless: asset.seamless };
+}
+
+/* ------------------------------------------------------------------ */
+/* Colourways & formats of an existing work                            */
+/* ------------------------------------------------------------------ */
+
+interface AttachInput {
+  assetId: string;
+  formatId: ExportFormatId;
+  colourwayId: string;
+  key: string;
+  buffer: Buffer;
+  scan: ScanReport;
+}
+
+/**
+ * Adds one deliverable (colourway + format) to a work that already exists.
+ *
+ * The file is scanned and stored exactly like a master, the colourway is created
+ * on first use, a watermarked preview is rendered for the new colour so the shop
+ * can show it, and every replaced file is removed from storage. A published work
+ * that gains files goes back to `pending_review` — the admin reviews what will
+ * actually be delivered.
+ */
+export async function attachUploadToAsset(session: UploadSession, input: AttachInput): Promise<CompletedUpload> {
+  const assets = await getAssets();
+  const asset = assets.find((item) => item.id === input.assetId);
+  if (!asset) {
+    await deleteObject(input.key).catch(() => undefined);
+    throw new Error("asset_not_found");
+  }
+  if (asset.ownerUserId && asset.ownerUserId !== session.userId) {
+    await deleteObject(input.key).catch(() => undefined);
+    throw new Error("forbidden");
+  }
+  if (asset.status === "sold_exclusive" || asset.status === "delisted") {
+    await deleteObject(input.key).catch(() => undefined);
+    throw new Error("asset_locked");
+  }
+
+  const raster = formatById(input.formatId)?.raster === true && input.formatId !== "preview";
+  const size = raster ? await readImageSize(input.buffer) : null;
+  const now = new Date().toISOString();
+  const file: ColourwayFile = {
+    id: newId("asf"),
+    formatId: input.formatId,
+    key: input.key,
+    provider: session.provider,
+    filename: session.filename,
+    mime: formatStoredMime(input.formatId),
+    sizeBytes: input.buffer.byteLength,
+    sha256: sha256(input.buffer),
+    width: size?.width,
+    height: size?.height,
+    cover: input.formatId === "preview" || undefined,
+    uploadedAt: now,
+  };
+
+  const existing = asset.colourways ?? [];
+  const index = existing.findIndex((colourway) => colourway.id === input.colourwayId);
+  const previous = index >= 0 ? existing[index] : null;
+  const replaced = previous?.files.filter((item) => item.formatId === input.formatId) ?? [];
+
+  /* A raster file or a custom cover gives this colour its public preview. */
+  let previewKey = previous?.previewKey ?? null;
+  let previewName: string | null = null;
+  if ((raster || input.formatId === "preview") && (input.formatId !== "preview" || !previewKey)) {
+    try {
+      const preview = await renderColourwayPreview(input.buffer, { assetId: asset.id });
+      previewName = `colourway-${input.colourwayId.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 40)}-${Date.now().toString(36)}.jpg`;
+      await putBuffer(derivedKey(asset.id, previewName), preview.buffer, "image/jpeg");
+      previewKey = derivedKey(asset.id, previewName);
+    } catch (error) {
+      console.error("[marketplace] colourway preview failed:", error);
+    }
+  }
+
+  const colourway: Colourway = {
+    id: input.colourwayId,
+    name: session.colourway?.name ?? previous?.name ?? { fa: "رنگ اصلی", en: "Original" },
+    hex: sanitizeHex(session.colourway?.hex ?? previous?.hex),
+    files: [...(previous?.files ?? []).filter((item) => item.formatId !== input.formatId), file],
+    previewKey,
+    order: previous?.order ?? existing.length,
+    createdAt: previous?.createdAt ?? now,
+  };
+
+  const colourways = index >= 0 ? existing.map((item, at) => (at === index ? colourway : item)) : [...existing, colourway];
+  const isPrimary = colourways[0]?.id === colourway.id;
+
+  const updated: Asset = await saveAsset({
+    ...asset,
+    colourways,
+    /* The first colourway drives the storefront cover and the hero preview. */
+    previewKey: isPrimary && previewKey ? previewKey : asset.previewKey,
+    master:
+      !asset.master || asset.master.mime === "" || !isRasterMime(asset.master.mime)
+        ? raster
+          ? {
+              key: input.key,
+              provider: session.provider,
+              filename: session.filename,
+              sizeBytes: input.buffer.byteLength,
+              mime: formatStoredMime(input.formatId),
+              sha256: sha256(input.buffer),
+              width: size?.width,
+              height: size?.height,
+              uploadedAt: now,
+            }
+          : asset.master
+        : asset.master,
+    /* A published work with new files must be reviewed again before it sells. */
+    status: asset.status === "approved" ? "pending_review" : asset.status,
+    review: asset.status === "approved" ? { ...asset.review, filesUpdatedAt: now } : asset.review,
+    updatedAt: now,
+  });
+
+  for (const file of replaced) {
+    if (file.key !== input.key) await deleteObject(file.key).catch(() => undefined);
+  }
+  await mutateCollection<UploadSession, void>(KEYS.uploads, (sessions) => ({
+    next: sessions.map((item) =>
+      item.id === session.id
+        ? { ...item, status: "completed" as const, completedAt: now, assetId: updated.id }
+        : item,
+    ),
+    result: undefined,
+  }));
+
+  return { asset: updated, scan: input.scan, seamless: updated.seamless };
+}
+
+function isRasterMime(mime: string): boolean {
+  return mime.startsWith("image/") && !mime.includes("svg");
+}
+
+/** Formats already delivered by a work — used by the uploader and the studio. */
+export function assetFormatSet(asset: Asset): Set<string> {
+  const set = new Set<string>();
+  for (const colourway of asset.colourways ?? []) {
+    for (const file of colourway.files) set.add(file.formatId);
+  }
+  return set;
 }
 
 /* ------------------------------------------------------------------ */

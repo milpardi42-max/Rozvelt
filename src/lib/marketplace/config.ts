@@ -36,9 +36,19 @@ export const MAX_MASTER_BYTES = Number(process.env.MARKETPLACE_MAX_MASTER_MB ?? 
 
 export const MIN_MASTER_BYTES = 1024; // 1 KiB
 
-/** Accepted master file types. */
+/**
+ * Accepted master file types → canonical storage extension.
+ *
+ * The list mirrors `EXPORT_FORMATS` in `lib/marketplace/formats.ts` plus the
+ * archive/print types artists also hand over. Several rows share an extension
+ * on purpose: browsers report Photoshop, Illustrator and EPS files through a
+ * handful of different MIME aliases, and the *chosen format* (not this table)
+ * decides the extension we finally store — see `createUploadSession`.
+ */
 export const ACCEPTED_MASTER_MIME: Record<string, string> = {
   "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/pjpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
   "image/tiff": "tif",
@@ -46,6 +56,18 @@ export const ACCEPTED_MASTER_MIME: Record<string, string> = {
   "application/pdf": "pdf",
   "application/zip": "zip",
   "application/postscript": "ai",
+  "application/illustrator": "ai",
+  "application/x-illustrator": "ai",
+  "application/vnd.adobe.illustrator": "ai",
+  "image/vnd.adobe.photoshop": "psd",
+  "image/x-photoshop": "psd",
+  "image/psd": "psd",
+  "application/x-photoshop": "psd",
+  "application/photoshop": "psd",
+  "application/eps": "eps",
+  "application/x-eps": "eps",
+  "image/eps": "eps",
+  "image/x-eps": "eps",
   "image/svg+xml": "svg",
 };
 

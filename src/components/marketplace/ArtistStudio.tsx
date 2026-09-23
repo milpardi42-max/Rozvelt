@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Clock,
   Copy,
+  Palette,
   RefreshCw,
   ShieldCheck,
   UploadCloud,
@@ -21,6 +22,7 @@ import { Badge } from "@/components/ui/Badge";
 import { formatPrice, href } from "@/lib/utils";
 import { SESSION_FETCH } from "@/lib/http";
 import { familyName } from "@/lib/data/families";
+import { formatLabel } from "@/lib/marketplace/formats";
 import type { PricePair } from "@/lib/marketplace/types";
 import type { Localized } from "@/lib/i18n/types";
 
@@ -50,6 +52,12 @@ interface StudioAsset {
   seamless: { verdict: string; score: number };
   tiers: { id: string; kind: string; title: Localized; price: PricePair; enabled: boolean; maxDownloads: number; maxUnits: number }[];
   media: { preview: string | null; tile: string | null; thumbs: string[]; mockups: { key: string; kind: string }[] };
+  /** Delivered colour versions and the formats inside each of them. */
+  formats?: string[];
+  colourways?: { id: string; name: Localized; hex: string; preview: string | null; formats: string[]; bytes: number }[];
+  deliveryBytes?: number;
+  /** Set when files/colours were added after approval — the work is re-reviewed. */
+  filesUpdatedAt?: string | null;
   stats: { views: number; sales: number; revenue: PricePair };
   sales: { fa: number; en: number; sales: number };
 }
@@ -376,6 +384,38 @@ export function ArtistStudio({ locale }: { locale: "fa" | "en" }) {
                       {fa ? "اسکن" : "Scan"}: {asset.scan.engine}/{asset.scan.status} ·{" "}
                       {fa ? "درزبندی" : "seam"}: {asset.seamless.verdict} ({(asset.seamless.score * 100).toFixed(0)}%)
                     </p>
+
+                    {(asset.colourways?.length ?? 0) > 0 && (
+                      <div className="mt-2 space-y-1">
+                        <p className="flex flex-wrap items-center gap-2 text-caption text-foreground-secondary">
+                          <Palette className="h-3.5 w-3.5 text-accent" />
+                          {fa
+                            ? `${asset.colourways!.length} رنگ · ${(asset.deliveryBytes ?? 0) >= 1048576 ? `${((asset.deliveryBytes ?? 0) / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round((asset.deliveryBytes ?? 0) / 1024))} KB`} تحویل`
+                            : `${asset.colourways!.length} colour(s) · ${(asset.deliveryBytes ?? 0) >= 1048576 ? `${((asset.deliveryBytes ?? 0) / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round((asset.deliveryBytes ?? 0) / 1024))} KB`} delivered`}
+                        </p>
+                        <ul className="flex flex-wrap gap-2">
+                          {asset.colourways!.map((colourway) => (
+                            <li
+                              key={colourway.id}
+                              className="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-[11px]"
+                            >
+                              <span className="h-3.5 w-3.5 rounded-full border border-border" style={{ background: colourway.hex }} aria-hidden />
+                              {colourway.name[locale] ?? colourway.name.fa}
+                              <span className="text-muted" dir="ltr">
+                                {colourway.formats.map((id) => formatLabel(id, locale)).join(" · ")}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                        {asset.filesUpdatedAt && (
+                          <p className="text-caption text-accent">
+                            {fa
+                              ? "فایل/رنگ تازه‌ای اضافه شده و اثر برای بازبینی دوباره در صف است."
+                              : "New files/colours were added — the work is back in the review queue."}
+                          </p>
+                        )}
+                      </div>
+                    )}
                     {asset.rejectionNote && <p className="mt-2 text-caption text-error">{asset.rejectionNote}</p>}
 
                     <div className="mt-3 flex flex-wrap gap-2 text-caption">

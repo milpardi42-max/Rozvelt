@@ -27,6 +27,19 @@ export function masterKey(assetId: string, ext: string): string {
   return `${OBJECT_ROOT.private}/masters/${assetId}/original.${ext}`;
 }
 
+/**
+ * A deliverable of one colourway, e.g.
+ * `private/masters/ast_x/cw_rose/ai-1k2j3.ai`.
+ *
+ * Lives beside the primary master so a single prefix purge still removes
+ * everything an asset owns, and `assetIdFromKey()` keeps working.
+ */
+export function deliverableKey(assetId: string, colourwayId: string, formatId: string, stamp: string, ext: string): string {
+  const safeColourway = colourwayId.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 40) || "cw";
+  const safeFormat = formatId.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 12) || "file";
+  return `${OBJECT_ROOT.private}/masters/${assetId}/${safeColourway}/${safeFormat}-${stamp}.${ext}`;
+}
+
 export function stagedMasterKey(sessionId: string, ext: string): string {
   return `${OBJECT_ROOT.private}/masters/staged/${sessionId}.${ext}`;
 }

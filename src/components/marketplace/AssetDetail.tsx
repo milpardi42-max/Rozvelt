@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { formatPrice, href, t } from "@/lib/utils";
 import { familyById } from "@/lib/data/families";
-import type { Locale } from "@/lib/i18n/types";
+import type { Locale, Localized } from "@/lib/i18n/types";
 import type { LicenseTier, PricePair } from "@/lib/marketplace/types";
 
 export interface AssetDetailData {
@@ -22,6 +22,16 @@ export interface AssetDetailData {
   tags: string[];
   /** Product family chosen on upload (`lib/data/families.ts`) — optional. */
   familyId?: string | null;
+  /** Colour versions of this work, each with its own preview and file set. */
+  colourways?: {
+    id: string;
+    name: Localized;
+    hex: string;
+    preview: string | null;
+    files: { formatId: string; sizeBytes: number; width?: number; height?: number }[];
+  }[];
+  /** Every deliverable format this work ships, in PNG→EPS order. */
+  formats?: { id: string; label: Localized; bytes: number; colourways: number }[];
   status: string;
   soldExclusive: boolean;
   purchasable: boolean;
@@ -69,12 +79,32 @@ export function AssetDetail({ locale, asset, artistName, couponHint }: Props) {
   const [galleryIndex, setGalleryIndex] = useState(0);
 
   const tier = tiers.find((item) => item.id === selected) ?? null;
+  const colourways = asset.colourways ?? [];
+  /* Gallery order: colour 1 (mockups around it), then every other colour, then
+     the flat 2×2 tile. Missing previews are skipped rather than left blank. */
   const gallery = [
-    ...(asset.media.preview ? [asset.media.preview] : []),
+    ...(colourways[0]?.preview ? [colourways[0].preview] : asset.media.preview ? [asset.media.preview] : []),
     ...asset.media.mockups.map((file) => file.key),
+    ...colourways.slice(1).map((colourway) => colourway.preview).filter((key): key is string => Boolean(key)),
     ...(asset.media.tile ? [asset.media.tile] : []),
   ];
   const activeKey = gallery[Math.min(galleryIndex, Math.max(gallery.length - 1, 0))] ?? null;
+
+  /** Which gallery frame shows each colour (null when a colour ships no preview). */
+  const colourFrame = (() => {
+    const frames = new Map<string, number>();
+    let cursor = asset.media.preview || colourways[0]?.preview ? 1 + asset.media.mockups.length : 0;
+    colourways.forEach((colourway, index) => {
+      if (index === 0) {
+        frames.set(colourway.id, 0);
+        return;
+      }
+      if (!colourway.preview) return;
+      frames.set(colourway.id, cursor);
+      cursor += 1;
+    });
+    return frames;
+  })();
 
   const inCart = asset.id ? has(asset.id) : false;
 
@@ -101,6 +131,35 @@ export function AssetDetail({ locale, asset, artistName, couponHint }: Props) {
             {fa ? "پیش‌نمایش واترمارک‌شده — فایل اصلی بدون واترمارک است" : "Watermarked preview — the master file is clean"}
           </span>
         </div>
+
+        {colourways.length > 1 && (
+          <div className="mt-4">
+            <p className="mb-2 text-caption font-medium text-foreground-secondary">
+              {fa ? `رنگ‌بندی‌ها (${colourways.length} رنگ)` : `Colourways (${colourways.length})`}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {colourways.map((colourway) => {
+                const frame = colourFrame.get(colourway.id);
+                const active = frame !== undefined && frame === galleryIndex && galleryIndex < gallery.length - asset.media.mockups.length - (asset.media.tile ? 1 : 0);
+                return (
+                  <button
+                    key={colourway.id}
+                    type="button"
+                    onClick={() => frame !== undefined && setGalleryIndex(frame)}
+                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-caption transition-colors ${
+                      active ? "border-accent bg-accent/10" : "border-border hover:border-foreground/40"
+                    }`}
+                    title={colourway.preview ? undefined : fa ? "پیش‌نمایشی برای این رنگ ثبت نشده" : "No preview for this colour yet"}
+                  >
+                    <span className="h-4 w-4 rounded-full border border-border" style={{ background: colourway.hex }} aria-hidden />
+                    {colourway.name[locale] ?? colourway.name.fa}
+                    <span className="text-muted">{colourway.files.length}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {gallery.length > 1 && (
           <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
@@ -147,6 +206,40 @@ export function AssetDetail({ locale, asset, artistName, couponHint }: Props) {
                 : "Score compares wrap-edge continuity against interior variation."}
             </p>
           </div>
+
+          {asset.formats && asset.formats.length > 0 && (
+            <div className="rounded-xl border border-border p-4 sm:col-span-2">
+              <p className="flex items-center gap-2 text-caption font-medium text-foreground">
+                <Layers className="h-3.5 w-3.5 text-accent" />
+                {fa ? "فرمت‌های تحویل" : "Delivered formats"}
+              </p>
+              <p className="mt-1 text-caption text-foreground-secondary">
+                {fa
+                  ? "با خرید لایسنس، همهٔ این فایل‌ها را در حساب خود دانلود می‌کنید — خام، بدون واترمارک."
+                  : "One license unlocks every file below in your account — clean, un-watermarked."}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {asset.formats.map((format) => (
+                  <span
+                    key={format.id}
+                    className="inline-flex items-center gap-2 rounded-full border border-border bg-background-secondary px-3 py-1.5 text-caption"
+                  >
+                    <span className="font-semibold" dir="ltr">
+                      {format.label[locale] ?? format.label.fa}
+                    </span>
+                    <span className="text-muted" dir="ltr">
+                      {format.bytes >= 1024 * 1024 ? `${(format.bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(format.bytes / 1024))} KB`}
+                    </span>
+                    {format.colourways > 1 && (
+                      <span className="text-muted">
+                        {fa ? `${format.colourways} رنگ` : `${format.colourways} colours`}
+                      </span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="rounded-xl border border-border p-4">
             <p className="flex items-center gap-2 text-caption text-foreground-secondary">

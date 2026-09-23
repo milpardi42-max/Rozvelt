@@ -17,6 +17,9 @@
  * copy. To deliberately re-seed the running store from `data/`, run the build with
  * `ROZVELT_DATA_FROM_REPO=1`.
  *
+ * Restoring also *creates* the folder when the build produced none: repositories that keep
+ * `data/` out of git would otherwise lose the whole store on every deploy.
+ *
  * Usage:
  *   node scripts/preserve-data.mjs --snapshot
  *   node scripts/preserve-data.mjs --restore
@@ -29,13 +32,19 @@ const standaloneData = join(root, "dist/.next/standalone/data");
 const snapshot = join(root, ".runtime-data/data");
 const mode = process.argv[2] ?? "--snapshot";
 
-if (!existsSync(standaloneData)) {
-  // Standard `.next` deployments keep their data elsewhere — never fail a build here.
-  console.log(`ℹ dist/.next/standalone/data not found — nothing to ${mode === "--restore" ? "restore" : "snapshot"}.`);
+const restoring = mode === "--restore";
+
+/* A standard `.next` deployment keeps its data elsewhere, and the very first
+   build has nothing to snapshot — both are fine. When restoring, a missing
+   folder is *not* a reason to skip: the build may simply have produced no data
+   folder at all (nothing committed under `data/`), and the live store must come
+   back. */
+if (!existsSync(standaloneData) && !restoring) {
+  console.log("ℹ dist/.next/standalone/data not found — nothing to snapshot.");
   process.exit(0);
 }
 
-const files = countFiles(standaloneData);
+const files = existsSync(standaloneData) ? countFiles(standaloneData) : 0;
 
 if (mode === "--snapshot") {
   rmSync(snapshot, { recursive: true, force: true });

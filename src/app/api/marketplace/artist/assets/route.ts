@@ -1,4 +1,5 @@
 import { getAssets, getUploadSessions, saveAsset, updateAssetTiers } from "@/lib/marketplace/assets";
+import { assetColourways, assetFormatIds, deliveryBytes } from "@/lib/marketplace/colourways";
 import { getLicensesForArtist } from "@/lib/marketplace/orders";
 import { fail, json, readJson, requireArtistOrAdmin } from "@/lib/marketplace/guard";
 
@@ -59,6 +60,18 @@ export async function GET() {
       },
       scan: asset.scan,
       seamless: asset.seamless,
+      /* What the work actually delivers: colour versions and their formats. */
+      formats: assetFormatIds(asset),
+      colourways: assetColourways(asset).map((colourway) => ({
+        id: colourway.id,
+        name: colourway.name,
+        hex: colourway.hex,
+        preview: colourway.previewKey ?? null,
+        formats: colourway.files.map((file) => file.formatId),
+        bytes: colourway.files.reduce((total, file) => total + file.sizeBytes, 0),
+      })),
+      deliveryBytes: deliveryBytes(asset),
+      filesUpdatedAt: asset.review?.filesUpdatedAt ?? null,
       media: {
         preview: asset.previewKey,
         tile: asset.tileKey,

@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { AssetDetail, type AssetDetailData } from "@/components/marketplace/AssetDetail";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { getAssets, getAssetBySlug } from "@/lib/marketplace/assets";
+import { assetColourways, assetDeliverables } from "@/lib/marketplace/colourways";
+import { DELIVERABLE_FORMATS, isDeliverableFormatId } from "@/lib/marketplace/formats";
 import type { Locale } from "@/lib/i18n/types";
 import { href, t } from "@/lib/utils";
 
@@ -38,6 +40,36 @@ export default async function MarketplaceAssetPage({ params }: { params: Promise
     kind: asset.kind,
     tags: asset.tags,
     familyId: asset.familyId ?? null,
+    colourways: assetColourways(asset).map((colourway) => ({
+      id: colourway.id,
+      name: colourway.name,
+      hex: colourway.hex,
+      preview: colourway.previewKey ?? null,
+      files: colourway.files
+        .filter((file) => isDeliverableFormatId(file.formatId))
+        .map((file) => ({
+          formatId: file.formatId,
+          sizeBytes: file.sizeBytes,
+          width: file.width,
+          height: file.height,
+        })),
+    })),
+    /* One row per format the artist actually delivered, with its total size. */
+    formats: assetDeliverables(asset).length
+      ? DELIVERABLE_FORMATS.flatMap((format) => {
+          const files = assetDeliverables(asset).filter((item) => item.formatId === format.id);
+          return files.length
+            ? [
+                {
+                  id: format.id,
+                  label: format.label,
+                  bytes: files.reduce((total, item) => total + item.file.sizeBytes, 0),
+                  colourways: new Set(files.map((item) => item.colourwayId)).size,
+                },
+              ]
+            : [];
+        })
+      : [],
     status: asset.status,
     soldExclusive: asset.status === "sold_exclusive",
     purchasable: asset.status === "approved" && asset.visibility === "public",

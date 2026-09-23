@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAsset, getAssets } from "@/lib/marketplace/assets";
 import { assetIdFromKey, getStream, isPublicDerivedKey, signedMediaUrl } from "@/lib/marketplace/media-access";
+import { assetDerivedKeys } from "@/lib/marketplace/colourways";
 import { getSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +31,9 @@ export async function GET(request: Request) {
   const asset = await getAsset(assetId);
   if (!asset) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
 
-  const known = [...asset.derivatives, ...asset.mockups].some((file) => file.key === key) || asset.previewKey === key || asset.tileKey === key;
+  /* Watermarked derivatives only: master previews, thumbnails, mockups, tiles and
+     one preview per colourway. Clean masters are never reachable here. */
+  const known = assetDerivedKeys(asset).has(key);
   if (!known) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
 
   const published = asset.status === "approved" || asset.status === "sold_exclusive";

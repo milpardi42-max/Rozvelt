@@ -105,8 +105,18 @@ interface QueueItem {
     seamless: { verdict: string; score: number };
     tiers: { id: string; kind: string; title: Localized; price: PricePair; enabled: boolean }[];
     media: { preview: string | null; tile: string | null; thumbs: string[]; mockups: { key: string; kind: string }[] };
+    /** Delivered colour versions — each with the formats inside it. */
+    formats?: string[];
+    deliveryBytes?: number;
+    colourways?: {
+      id: string;
+      name: Localized;
+      hex: string;
+      preview: string | null;
+      formats: { formatId: string; filename: string; sizeBytes: number }[];
+    }[];
     rejectionNote?: string;
-    review?: { reviewedBy?: string; reviewedAt?: string; note?: string };
+    review?: { reviewedBy?: string; reviewedAt?: string; note?: string; filesUpdatedAt?: string };
   };
   artistName: Localized;
   ownerEmail: string | null;
@@ -438,6 +448,37 @@ export function AdminConsole({ locale }: { locale: "fa" | "en" }) {
                   <p className="mt-1 text-caption text-foreground-secondary" dir="ltr">
                     sha256: {item.asset.master.sha256.slice(0, 24)}…
                   </p>
+
+                  {(item.asset.colourways?.length ?? 0) > 0 && (
+                    <div className="mt-3 rounded-lg border border-border bg-background-secondary/50 p-3">
+                      <p className="text-caption font-medium">
+                        {(fa ? "تحویل نهایی: " : "Delivery: ") +
+                          `${item.asset.colourways!.length} ${fa ? "رنگ" : "colour(s)"} · ` +
+                          (item.asset.formats ?? []).join(" · ") +
+                          ` · ${(((item.asset.deliveryBytes ?? 0) / 1024 / 1024) || 0).toFixed(1)} MB`}
+                      </p>
+                      <ul className="mt-2 space-y-1.5">
+                        {item.asset.colourways!.map((colourway) => (
+                          <li key={colourway.id} className="flex flex-wrap items-center gap-2 text-caption text-foreground-secondary">
+                            <span className="h-3.5 w-3.5 rounded-full border border-border" style={{ background: colourway.hex }} aria-hidden />
+                            <span className="font-medium text-foreground">{colourway.name.fa}</span>
+                            <span dir="ltr" className="text-muted">
+                              {colourway.formats
+                                .map((file) => `${file.formatId.toUpperCase()} ${Math.max(1, Math.round(file.sizeBytes / 1024))}KB`)
+                                .join(" · ")}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      {item.asset.review?.filesUpdatedAt && (
+                        <p className="mt-2 text-caption text-warning">
+                          {fa
+                            ? "هنرمند بعد از انتشار فایل/رنگ تازه اضافه کرده است — همین موارد را دوباره بررسی کنید."
+                            : "The artist added files/colours after publication — review the new set."}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {item.warnings.length > 0 && (
                     <ul className="mt-2 space-y-1 text-caption text-warning">

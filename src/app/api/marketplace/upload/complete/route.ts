@@ -1,9 +1,7 @@
-import {
-  MIN_MASTER_BYTES,
-  MULTIPART_PART_SIZE,
-} from "@/lib/marketplace/config";
+import { MULTIPART_PART_SIZE } from "@/lib/marketplace/config";
+import { minUploadBytes } from "@/lib/marketplace/formats";
 import { completeUpload, getOpenUploadSession, getUploadSession, abortUploadSession } from "@/lib/marketplace/assets";
-import { deletePrefix } from "@/lib/marketplace/storage";
+import { deleteObject, deletePrefix } from "@/lib/marketplace/storage";
 import { fail, json, requireArtistOrAdmin } from "@/lib/marketplace/guard";
 import { scanBuffer } from "@/lib/marketplace/scanner";
 
@@ -69,7 +67,8 @@ export async function POST(request: Request) {
     if (missing.length) return fail("missing_parts", 409, { missing, received: session.parts.length, totalParts });
     buffer = undefined; // completeUpload assembles the staging chunks itself
   } else if (file) {
-    if (file.size < MIN_MASTER_BYTES) return fail("file_too_small", 400);
+    const floor = minUploadBytes(session.formatId);
+    if (file.size < floor) return fail("file_too_small", 400, { minBytes: floor });
     buffer = Buffer.from(await file.arrayBuffer());
   } else {
     return fail("missing_body", 400);
@@ -99,6 +98,19 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = String(error);
+    if (message.includes("file_too_small")) {
+      return fail("file_too_small", 400, { minBytes: (error as { minBytes?: number }).minBytes ?? 0 });
+    }
+    if (message.includes("asset_not_found")) return fail("asset_not_found", 404);
+    if (message.includes("forbidden")) return fail("forbidden", 403);
+    if (message.includes("asset_locked")) return fail("asset_locked", 409, { detail: "work is sold exclusively or delisted" });
+    if (message.includes("invalid_signature")) {
+      const formatId = (error as { formatId?: string }).formatId ?? "";
+      await deleteObject(session.attachToAssetId ? session.key : session.key).catch(() => undefined);
+      await abortUploadSession(session.id).catch(() => undefined);
+      await deletePrefix(`private/staging/${session.id}`).catch(() => undefined);
+      return fail("invalid_signature", 422, { formatId });
+    }
     if (message.includes("infected")) {
       const scan = (error as { scan?: Awaited<ReturnType<typeof scanBuffer>> }).scan;
       await abortUploadSession(session.id).catch(() => undefined);

@@ -30,6 +30,8 @@ export interface CertificateAsset {
   title: { fa: string; en: string };
   sku?: string;
   kind?: string;
+  /** Formats the license delivers — printed so the document matches the files. */
+  formats?: { fa: string; en: string } | null;
 }
 
 export interface CertificateLicense {
@@ -254,6 +256,9 @@ async function drawCertificatePage(ctx: Ctx, input: CertificateInput) {
     [L(fa, "ایمیل", "Email"), input.buyer.email],
     [L(fa, "اثر / شناسه", "Work / SKU"), `${fa ? input.asset.title.fa : input.asset.title.en}${input.asset.sku ? ` · ${input.asset.sku}` : ""}`],
     [L(fa, "هنرمند", "Artist"), fa ? input.artist.name.fa : input.artist.name.en],
+    ...(input.asset.formats
+      ? ([[L(fa, "فرمت‌های تحویل", "Delivered formats"), fa ? input.asset.formats.fa : input.asset.formats.en]] as [string, string][])
+      : []),
     [L(fa, "نوع لایسنس", "License type"), fa ? input.license.licenseKindLabel.fa : input.license.licenseKindLabel.en],
     [
       L(fa, "محدوده استفاده", "Usage scope"),

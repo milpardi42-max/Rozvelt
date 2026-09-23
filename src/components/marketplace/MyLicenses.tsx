@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { BadgeCheck, Copy, Download, FileText, Loader2, ShieldCheck } from "lucide-react";
+import { BadgeCheck, Copy, Download, FileText, Layers, Loader2, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { formatPrice, href } from "@/lib/utils";
 import { SESSION_FETCH } from "@/lib/http";
@@ -15,6 +15,22 @@ import type { Localized } from "@/lib/i18n/types";
  * Every purchase lists its certificate number, the signed download link (which
  * expires, so it is always fetched fresh) and the remaining download quota.
  */
+
+interface LicenseFile {
+  id: string;
+  formatId: string;
+  /** «PNG» / "PNG" — already localised by the API. */
+  formatLabel: Localized;
+  colourwayId: string;
+  colourwayName: Localized;
+  hex: string;
+  filename: string;
+  sizeBytes: number;
+  mime: string;
+  width: number | null;
+  height: number | null;
+  url: string;
+}
 
 interface LicenseRow {
   id: string;
@@ -33,8 +49,17 @@ interface LicenseRow {
   quota: { used: number; limit: number; unlimited: boolean; remaining: number | null };
   downloads: { at: string; ip: string }[];
   downloadUrl: string | null;
+  /** Every deliverable this license unlocks, colourway by colourway. */
+  files: LicenseFile[];
+  deliveryBytes: number;
+  colourways: { id: string; name: Localized; hex: string; preview: string | null; formats: string[] }[];
   certificateUrl: string;
   verifyUrl: string;
+}
+
+function bytesLabel(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
 export function MyLicenses({ locale }: { locale: "fa" | "en" }) {
@@ -154,6 +179,59 @@ export function MyLicenses({ locale }: { locale: "fa" | "en" }) {
               </button>
             </div>
           </div>
+
+          {license.files.length > 0 && (
+            <div className="mt-4 rounded-xl border border-border bg-background-secondary/50 p-4">
+              <p className="flex flex-wrap items-center gap-2 text-caption font-medium text-foreground">
+                <Layers className="h-3.5 w-3.5 text-accent" />
+                {fa
+                  ? `فایل‌های تحویل — ${license.files.length} فایل · ${bytesLabel(license.deliveryBytes)}`
+                  : `Delivered files — ${license.files.length} file(s) · ${bytesLabel(license.deliveryBytes)}`}
+                <span className="text-foreground-secondary">
+                  {fa
+                    ? `(هر دانلود یک واحد از سهمیه: ${license.quota.used}/${license.quota.unlimited ? "∞" : license.quota.limit})`
+                    : `(each download uses one credit: ${license.quota.used}/${license.quota.unlimited ? "∞" : license.quota.limit})`}
+                </span>
+              </p>
+
+              <div className="mt-3 space-y-3">
+                {license.colourways
+                  .filter((colourway) => license.files.some((file) => file.colourwayId === colourway.id))
+                  .map((colourway) => (
+                    <div key={colourway.id}>
+                      <p className="flex items-center gap-2 text-[11px] font-semibold text-foreground-secondary">
+                        <span className="h-3.5 w-3.5 rounded-full border border-border" style={{ background: colourway.hex }} aria-hidden />
+                        {colourway.name[locale] ?? colourway.name.fa}
+                        <span className="text-muted">
+                          {fa ? `${colourway.formats.length} فرمت` : `${colourway.formats.length} format(s)`}
+                        </span>
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {license.files
+                          .filter((file) => file.colourwayId === colourway.id)
+                          .map((file) => (
+                            <a
+                              key={file.id}
+                              href={file.url}
+                              className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3.5 py-1.5 text-caption hover:border-foreground"
+                              download={file.filename}
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                              <span className="font-medium" dir="ltr">
+                                {file.formatLabel[locale] ?? file.formatLabel.fa}
+                              </span>
+                              <span className="text-muted" dir="ltr">
+                                {bytesLabel(file.sizeBytes)}
+                                {file.width && file.height ? ` · ${file.width}×${file.height}` : ""}
+                              </span>
+                            </a>
+                          ))}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
 
           <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-3 text-caption text-foreground-secondary">
             <span className="inline-flex items-center gap-1">
