@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 function clean(value: unknown, max: number): string | undefined {
   if (typeof value !== "string") return undefined;
   const trimmed = value
+    // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u001f\u007f]+/g, " ")
     .trim()
     .slice(0, max);
@@ -67,16 +68,14 @@ export async function POST(req: Request) {
   const role = body.role === "artist" ? "artist" : "user";
 
   /*
-   * Buyers and designers share one registration form (SignupForm) and pick the
-   * account type inside it, which reaches us as `role` — "user" for a buyer,
-   * "artist" for a designer. The account itself is always the same four fields;
-   * the designer also gets the seller part — phone, field of practice, city,
-   * Instagram, portfolio and an *optional* studio block (studio name, years of
-   * practice, a short bio, the delivery formats, the product families and the
-   * seller terms). None of that is required: an empty answer is simply not
-   * stored and can be completed later from the artist dashboard. Either way it
-   * lands in the same account model — the seller fields are captured on the
-   * Artist record that self-registration creates.
+   * Buyers sign up with the short form (/signup); designers register on the
+   * seller page (/signup/artist), which is one single-page form: the account,
+   * the field of practice and the city, plus an *optional* studio block —
+   * studio name, years of practice, a short bio, the delivery formats, the
+   * product families and the seller terms. None of it is required: an empty
+   * answer is simply not stored and can be completed later from the artist
+   * dashboard. Both doors land in the same account model — the seller fields
+   * are captured on the Artist record that self-registration creates.
    */
   let extra;
   if (role === "artist") {

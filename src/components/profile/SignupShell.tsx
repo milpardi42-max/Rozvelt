@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Logo } from "@/components/layout/Logo";
 import { href } from "@/lib/utils";
 import type { Locale } from "@/lib/i18n/types";
-import { SignupForm, type AccountRole } from "./SignupForm";
+import { AuthForm } from "./AuthForm";
 import { AccountTypeSwitch } from "./AccountTypeSwitch";
 
 interface SignupShellProps {
@@ -18,34 +18,20 @@ interface SignupShellProps {
   title?: string;
   /** Renders the account-type switch above the form — /signup/buyer uses this */
   switchCurrent?: "buyer" | "artist";
-  /** Which half of the shared form opens first (buyers here, artists on /signup/artist) */
-  initialRole?: AccountRole;
-  /** Field-of-practice choices for the seller half of the form */
-  options: string[];
-  /** Artist revenue share quoted on the seller card inside the form */
-  sharePct: number;
+  /** Replaces the built-in buyer form entirely — the /signup chooser uses this */
+  children?: React.ReactNode;
 }
 
 /**
- * Registration shell — the auth card shared by /signup and /signup/buyer.
+ * Registration shell — the auth card shared by the signup pages.
  *
- * Both pages carry the *same* registration form (SignupForm): the account type
- * is picked inside it, so a buyer and a designer really do share one form. The
- * shell only provides the card, the transition to the login page and the
- * pointer to the seller page — the buyer page additionally shows the
- * account-type switch. The designer half has its own page (/signup/artist)
- * because its content is the whole sell-side story.
+ * /signup/buyer keeps the short form buyers always had (name, e-mail, password,
+ * confirmation) together with the account-type switch; /signup (the chooser)
+ * passes its own content as children instead of the form. The designer page
+ * (/signup/artist) is a different layout entirely and points here from its own
+ * type switch.
  */
-export function SignupShell({
-  locale,
-  image,
-  dict,
-  title,
-  switchCurrent,
-  initialRole = "buyer",
-  options,
-  sharePct,
-}: SignupShellProps) {
+export function SignupShell({ locale, image, dict, title, switchCurrent, children }: SignupShellProps) {
   const router = useRouter();
   const [leaving, setLeaving] = useState<"manual" | "signup" | null>(null);
   const [isEntering, setIsEntering] = useState(false);
@@ -114,28 +100,25 @@ export function SignupShell({
 
           {switchCurrent && <AccountTypeSwitch current={switchCurrent} className="mb-6" />}
 
-          <SignupForm
-            initialRole={initialRole}
-            options={options}
-            sharePct={sharePct}
-            onSignupSuccess={handleSignupSuccess}
-          />
+          {children ?? <AuthForm mode="signup" onSignupSuccess={handleSignupSuccess} />}
 
-          {/* the seller page holds the sell-side story — this is the way there */}
-          <div className="mt-6 rounded-2xl border border-border bg-background-secondary p-4 text-start">
-            <p className="text-caption font-medium">{fa ? "طراح یا فروشنده هستید؟" : "Are you a designer or seller?"}</p>
-            <p className="mt-1 text-caption text-foreground-secondary">
-              {fa
-                ? "همین فرم بالا با انتخاب «هنرمند / طراح» اطلاعات فروشندگی را هم می‌پرسد. توضیح کامل فروش، فرمت‌های تحویل، سهم و تسویه در صفحه‌ی هنرمند / طراح است."
-                : "Picking “Artist / Designer” in the form above asks for the seller details too. The full story — formats, share, payouts — lives on the artist page."}
-            </p>
-            <Link
-              href={href(locale, "/signup/artist")}
-              className="mt-3 inline-flex h-9 items-center rounded-full border border-border px-4 text-caption font-medium transition hover:border-foreground"
-            >
-              {fa ? "صفحه‌ی هنرمند / طراح" : "Artist / designer page"}
-            </Link>
-          </div>
+          {/* only the buyer form needs the pointer: the chooser already offers the choice */}
+          {!children && (
+            <div className="mt-6 rounded-2xl border border-border bg-background-secondary p-4 text-start">
+              <p className="text-caption font-medium">{fa ? "طراح یا فروشنده هستید؟" : "Are you a designer or seller?"}</p>
+              <p className="mt-1 text-caption text-foreground-secondary">
+                {fa
+                  ? "ثبت‌نام فروشندگان صفحه‌ی جداگانه‌ی خودش را دارد: در یک فرم کوتاه، حساب کاربری و حوزه‌ی فعالیت شما ثبت می‌شود و اطلاعات استودیو و فرمت‌های تحویل اختیاری‌اند."
+                  : "Seller registration has its own page: one short form for your account and field of practice — studio details and delivery formats are optional."}
+              </p>
+              <Link
+                href={href(locale, "/signup/artist")}
+                className="mt-3 inline-flex h-9 items-center rounded-full border border-border px-4 text-caption font-medium transition hover:border-foreground"
+              >
+                {fa ? "ثبت‌نام هنرمند / طراح" : "Artist / designer signup"}
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 

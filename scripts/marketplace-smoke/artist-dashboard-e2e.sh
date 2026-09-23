@@ -1,16 +1,14 @@
 #!/usr/bin/env bash
 #
-# One registration form + artist dashboard — runs against a live server.
+# Registration split + artist dashboard — runs against a live server.
 #
 # Proves, with a real registration and real pages, that:
-#   1. buyers and designers share ONE registration form (SignupForm): /signup
-#      serves that form, the account type is chosen inside it, the seller half
-#      is in the form (closed until chosen) and opens by itself on the artist
-#      page; /signup/buyer is the same form under a buyer heading and the old
-#      /creators/join redirects to the artist page
-#   2. the artist page (/signup/artist) keeps the whole sell-side content
-#      (formats, families, money, FAQ) and opens the same form on the seller
-#      half, with the studio file offered as an optional block and no wizard
+#   1. registration is a chooser (/signup) plus one page per account type: the
+#      buyer page (/signup/buyer) keeps the short four-field form, the artist
+#      page (/signup/artist) carries the whole sell-side content (formats,
+#      families, money, FAQ) and serves the seller form as one single page — the
+#      form it always had, with the studio file offered as an optional block and
+#      no step wizard; the old /creators/join redirects to the artist page
 #   3. POST /api/auth/signup really stores that optional seller file (studio,
 #      experience, declared formats + families, bio, terms) on the Artist record
 #      when it is filled in, and invents nothing when it is not
@@ -100,35 +98,19 @@ def login(jar, email, password):
     return api("POST", "/api/auth/login", {"email": email, "password": password}, cookie=jar)
 
 
-def form_markup(page):
-    """The registration form markup alone — the form carrying the account-type radios.
-
-    Pages also carry a newsletter form in the footer, so the registration form is
-    found from its own radio group instead of from the first <form> on the page.
-    """
-    anchor = page.find('name="account_role"')
-    if anchor < 0:
-        return ""
-    start = page.rfind("<form", 0, anchor)
-    end = page.find("</form>", anchor)
-    return page[start:end + len("</form>")] if start >= 0 and end > start else ""
+def auth_form(page):
+    """The auth card's own form — the footer newsletter form is not the one we mean."""
+    start = page.find("auth-card__form")
+    if start < 0:
+        return page
+    end = page.find("</form>", start)
+    return page[start : end + len("</form>")] if end > start else page[start:]
 
 
-def seller_in_form(page):
-    """True when the seller half of the shared form is in the markup at all."""
-    return bool(re.search(r"<div[^>]*data-seller-fields", form_markup(page)))
-
-
-def seller_open(page):
-    """True when the seller half is visible — i.e. «هنرمند / طراح» is the pick."""
-    match = re.search(r"<div[^>]*data-seller-fields[^>]*>", form_markup(page))
-    return bool(match) and "hidden" not in match.group(0)
-
-
-def radio_checked(page, value):
-    """True when the account-type radio carrying this value renders checked."""
-    match = re.search(rf'<input[^>]*name="account_role"[^>]*value="{value}"[^>]*>', page)
-    return bool(match) and "checked" in match.group(0)
+def css_of(page):
+    """Every stylesheet the page loads, whitespace and quotes stripped."""
+    sheets = re.findall(r'<link rel="stylesheet" href="([^"]+)"', page)
+    return "".join(curl([f"{BASE}{sheet}"]) for sheet in sheets).replace(" ", "").replace('"', "")
 
 
 def redirect_of(path):
@@ -155,40 +137,32 @@ def save(name, payload):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-heading("1. one registration form — the account type is chosen inside it")
+heading("1. /signup is the chooser — one account type, one page")
 
 for locale in ("fa", "en"):
     page = curl([f"{BASE}/{locale}/signup"])
-    form = form_markup(page)
-    check(f"{locale} · /signup serves the registration form itself", all(
-        needle in page for needle in ('name="name"', 'name="email"', 'name="password"', 'name="confirm"')))
-    check(f"{locale} · the account type is a real choice inside that form", all(
-        needle in page for needle in ('name="account_role"', 'type="radio"', 'value="buyer"', 'value="artist"'))
-        and radio_checked(page, "buyer"))
-    check(f"{locale} · one form, not two: the seller half is inside it", seller_in_form(page))
-    check(f"{locale} · the seller half stays closed until it is chosen", not seller_open(page))
-    check(f"{locale} · the form itself adapts to the choice", (
-        "خریدار" in text(form) and "هنرمند" in text(form) and "۴۰٪" in text(form)) if locale == "fa" else (
-        "Buyer" in text(form) and "Artist" in text(form) and "40%" in text(form)))
-    check(f"{locale} · the seller page is one click away", f"/{locale}/signup/artist" in page)
-    # The switch itself is client state, so the proof that the seller half really
-    # opens on click is that the form's own bundle carries both halves: the
-    # wrapper that keeps it closed and the choice that opens it.
-    chunks = re.findall(r'<script src="([^"]+\.js)"', page)
-    bundle = "".join(curl([f"{BASE}{src}"]) for src in chunks)
-    check(f"{locale} · the choice ships with the page and switches on click",
-          "data-seller-fields" in bundle and "account_role" in bundle, f"{len(chunks)} chunks")
-    # …and the card's compact input sizing must not stretch the radio itself
-    sheets = re.findall(r'<link rel="stylesheet" href="([^"]+)"', page)
-    css = "".join(curl([f"{BASE}{sheet}"]) for sheet in sheets).replace(" ", "").replace('"', "")
-    check(f"{locale} · the compact card keeps the account-type radios their own size",
-          bool(re.search(r"input\[type=radio\]\{[^}]*height:1rem!important", css)), f"{len(sheets)} stylesheets")
+    plain = text(page)
+    check(f"{locale} · both account types are offered as a real choice",
+          all(needle in page for needle in ('name="account_role"', 'type="radio"', 'value="buyer"', 'value="artist"')))
+    check(f"{locale} · each choice has its own page to open",
+          f"/{locale}/signup/buyer" in page and f"/{locale}/signup/artist" in page)
+    check(f"{locale} · no registration form on the chooser itself",
+          'name="confirm"' not in page and 'name="studioName"' not in page)
+    check(f"{locale} · names both kinds of account",
+          ("خریدار" in plain and "هنرمند" in plain) if locale == "fa" else ("Buyer" in plain and "Artist" in plain))
+
+    # the radios of that choice live inside the auth card, whose compact input
+    # rule must leave them their own size (they are visually hidden on purpose)
+    css = css_of(page)
+    check(f"{locale} · the compact card sizing leaves the account-type radios alone",
+          bool(re.search(r"input:not\(\[type=radio\]\)", css)))
 
     buyer_page = curl([f"{BASE}/{locale}/signup/buyer"])
-    check(f"{locale} · the buyer page serves the very same form", all(
-        needle in buyer_page for needle in (
-            'name="account_role"', 'name="name"', 'name="email"', 'name="password"', 'name="confirm"'))
-        and seller_in_form(buyer_page))
+    buyer_form = auth_form(buyer_page)
+    check(f"{locale} · buyer page keeps its four fields", all(
+        needle in buyer_form for needle in ('name="name"', 'name="email"', 'name="password"', 'name="confirm"')))
+    check(f"{locale} · the buyer form is the buyer's own — no seller fields in it", all(
+        needle not in buyer_form for needle in ('name="phone"', 'name="studioName"', 'name="type"', 'name="account_role"')))
     check(f"{locale} · the switch on the buyer page links to the artist page",
           f"/{locale}/signup/artist" in buyer_page and 'aria-current="page"' in buyer_page)
     check(f"{locale} · the buyer page still points designers at their own page",
@@ -202,15 +176,14 @@ for locale in ("fa", "en"):
           code in ("307", "308") and location.endswith(f"/{locale}/signup/artist"), f"{code} {location}")
 
 # ─────────────────────────────────────────────────────────────────────────────
-heading("2. the artist page keeps its content and opens the same form on the seller half")
+heading("2. the artist page keeps its content and the previous single-page form")
 
 for locale in ("fa", "en"):
     page = curl([f"{BASE}/{locale}/signup/artist"])
     plain = text(page)
-    # the form here is the same component as on /signup, only opened on the seller half
-    check(f"{locale} · the same one form opens on the seller half here",
-          page.count('name="confirm"') == 1 and seller_open(page) and radio_checked(page, "artist"))
-    check(f"{locale} · the seller half keeps the fields it always had", all(
+    # the form itself is the one the designer page always served: one grid with
+    # the account fields, the field of practice, the city and the two links.
+    check(f"{locale} · the previous seller form is served as one page", all(
         needle in page for needle in (
             'name="name"', 'name="email"', 'name="phone"', 'name="city"',
             'name="type"', 'name="instagram"', 'name="portfolio"',
@@ -235,6 +208,8 @@ for locale in ("fa", "en"):
     check(f"{locale} · the eight product families are offered",
           sum(1 for name in ("کاغذ دیواری", "پارچه دکوراسیون داخلی", "پرده", "کوسن", "روتختی", "رومیزی", "پارچه مبلمان", "آثار هنری دیواری")
               if name in plain) == 8 if locale == "fa" else "Wallpaper" in plain)
+    check(f"{locale} · the designer form is its own — the buyer's radio pair is not in it",
+          'name="phone"' in page and 'name="studioName"' in page and 'name="account_role"' not in page)
     check(f"{locale} · links the buyer signup back", f"/{locale}/signup/buyer" in page)
     check(f"{locale} · carries the account-type switch, marked as the artist half",
           'aria-current="page"' in page and f"/{locale}/signup/buyer" in page
@@ -460,5 +435,5 @@ print()
 if failures:
     print(f"✘ {len(failures)} check(s) failed: {', '.join(failures)}")
     sys.exit(1)
-print("✔ the shared signup form and the artist dashboard all verified")
+print("✔ the account-type signup pages and the artist dashboard all verified")
 PY
