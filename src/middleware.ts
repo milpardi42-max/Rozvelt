@@ -49,9 +49,17 @@ export async function middleware(req: NextRequest) {
   const sessionToken = req.cookies.get(SESSION_COOKIE)?.value;
   const session = await readSessionToken(sessionToken);
 
-  // /[locale]/artist — requires role: artist or admin
+  /*
+   * /[locale]/artist — the seller area.
+   *
+   * Signed-out visitors go to the login page. A signed-in *buyer* is let
+   * through on purpose: both /artist and /artist/marketplace explain that the
+   * area is for artists and point at the designer registration, which is far
+   * friendlier than a login form for an account that cannot open it. The
+   * artist APIs keep enforcing the role themselves.
+   */
   if (rest === "artist" || rest.startsWith("artist/")) {
-    if (!session || (session.role !== "artist" && session.role !== "admin")) {
+    if (!session) {
       const loginUrl = req.nextUrl.clone();
       loginUrl.pathname = `/${segments[0]}/login`;
       loginUrl.searchParams.set("next", pathname);

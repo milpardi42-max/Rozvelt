@@ -38,7 +38,12 @@ export function AuthForm({ mode, defaultRole, onSignupSuccess, prefill, autoSubm
   const router = useRouter();
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
-  const [role, setRole] = useState<"user" | "artist">(defaultRole ?? "user");
+  /*
+   * This form is the *buyer* door. Sellers register through the designer
+   * page (/creators/join), which collects the studio, the delivery formats and
+   * the product families — so there is no account-type switch here anymore.
+   */
+  const role = defaultRole ?? "user";
   const fa = locale === "fa";
 
   function getError(code: string): string {
@@ -123,34 +128,6 @@ export function AuthForm({ mode, defaultRole, onSignupSuccess, prefill, autoSubm
             minLength={6}
             autoComplete="new-password"
           />
-        </Field>
-      )}
-
-      {/* Role selector — only on signup */}
-      {mode === "signup" && (
-        <Field label={fa ? "نوع حساب" : "Account type"}>
-          <div className="flex gap-3">
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <input
-                type="radio"
-                name="account_role"
-                value="user"
-                checked={role === "user"}
-                onChange={() => setRole("user")}
-              />
-              {fa ? "خریدار" : "Buyer"}
-            </label>
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <input
-                type="radio"
-                name="account_role"
-                value="artist"
-                checked={role === "artist"}
-                onChange={() => setRole("artist")}
-              />
-              {fa ? "هنرمند / طراح" : "Artist / Designer"}
-            </label>
-          </div>
         </Field>
       )}
 

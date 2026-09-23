@@ -45,6 +45,16 @@ export interface Artist {
   signupCity?: string;
   signupSpecialty?: string;
   signupPortfolioUrl?: string;
+  /** Studio / brand name given by the designer at signup */
+  signupStudio?: string;
+  /** Years of practice, as declared at signup (free text, 1–60) */
+  signupExperience?: string;
+  /** Delivery formats the designer said they will upload (format ids) */
+  signupFormats?: string[];
+  /** Product families the designer works in (family ids) */
+  signupFamilies?: string[];
+  /** When the seller terms were accepted during registration */
+  signupTermsAt?: string;
   /** Admin rejection note, optionally set when status → "rejected" */
   rejectionNote?: string;
   /**

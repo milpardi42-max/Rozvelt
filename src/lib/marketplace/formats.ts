@@ -161,8 +161,14 @@ export const EXPORT_FORMATS: ExportFormat[] = [
 
 export const EXPORT_FORMAT_IDS: ExportFormatId[] = EXPORT_FORMATS.map((format) => format.id);
 
-/** Everything a buyer can receive — the cover image is not sold. */
-export const DELIVERABLE_FORMATS: ExportFormat[] = EXPORT_FORMATS.filter((format) => format.group !== "cover");
+/**
+ * Everything a buyer can receive — the cover image is not sold.
+ * The id is narrowed so callers get the deliverable union, not the wider
+ * `ExportFormatId` (which also contains `preview`).
+ */
+export const DELIVERABLE_FORMATS: (ExportFormat & { id: DeliverableFormatId })[] = EXPORT_FORMATS.filter(
+  (format): format is ExportFormat & { id: DeliverableFormatId } => format.group !== "cover",
+);
 
 /** A product must ship at least one of these so previews can be rendered. */
 export const RASTER_DELIVERY_IDS: DeliverableFormatId[] = ["png", "jpg"];

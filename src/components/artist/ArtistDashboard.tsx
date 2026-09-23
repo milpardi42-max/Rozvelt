@@ -112,7 +112,7 @@ export function ArtistDashboard() {
       <div className="border-b border-border bg-surface">
         <div className="container-x flex flex-col gap-3 py-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-label text-accent">{fa ? "داشبورد هنرمند" : "Artist Dashboard"}</p>
+            <p className="text-label text-accent">{fa ? "پورتفولیو و پروژه‌ها" : "Portfolio & projects"}</p>
             <h1 className="mt-1 font-display text-h2">{fa ? `سلام، ${user?.name}` : `Hello, ${user?.name}`}</h1>
           </div>
           <div className="flex gap-2">

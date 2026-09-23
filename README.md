@@ -74,6 +74,7 @@ src/
     patterns/ shop/ artists/ portfolio/ academy/ styles/ spaces/ collections/
     stories/ projects/ custom/ about/ contact/ faq/ returns/ legal/[doc]/
     login/ signup/ account/ favorites/ checkout/ search/ creators/join/ admin/
+    artist/                # dashboard (new) · marketplace (sales studio) · portfolio (manager)
   app/api/                 # newsletter, contact, admin content, auth, search-index, health
   app/sitemap.ts robots.ts # generated SEO files (use NEXT_PUBLIC_SITE_URL)
   components/
@@ -83,11 +84,13 @@ src/
     cards/                 # PatternCard, ProductCard, ArtistCard, PortfolioCard, EducationCard, StyleCard
     product/               # ColorSwatches, Actions, QuickView, Gallery, FilterBar, BuyBoxes
     portfolio/ profile/ home/ admin/ providers/
+    artist/                # ArtistDashboardView + dashboard parts (server-rendered)
   lib/
     i18n/                  # locale types + dictionary
     data/seed.ts           # seed content (patterns, products, artists, portfolios, education…)
     data/store.ts          # content store (Upstash Redis → Vercel Blob → data/content.json)
     data/queries.ts        # enrich/join helpers
+    artist/dashboard.ts    # everything the artist dashboard renders (server-side)
     types.ts               # data model
   app/globals.css          # single source of truth: tokens, typography, motion, primitives
 public/
@@ -131,6 +134,34 @@ Products belong to one of eight families, defined once in `src/lib/data/families
   `invalid_family` otherwise. After a successful upload the artist is redirected to that family in the
   shop (`/{locale}/shop?family=<slug>`), and `/artist` shows the family next to each asset.
 - **Admin** — `ProductsManager` gives every product a «دسته محصول» selector (including «بدون دسته»).
+
+## Artists: signup split & dashboard
+
+Registration has two doors, and they collect different things:
+
+- **Buyers** keep the short form at `/{locale}/signup` (name, e-mail, password, confirmation). It no
+  longer switches account type — it links to the designer page instead.
+- **Designers / sellers** register at `/{locale}/creators/join`: a three-step application
+  (account → studio & craft → work & terms) that captures the studio name, field of practice, city,
+  years of practice, a short bio, the **delivery formats** they will upload (PNG/JPG/preview/AI/PSD/
+  SVG/EPS) and the **product families** they work in. `POST /api/auth/signup` stores all of it on the
+  `Artist` record (`signupStudio`, `signupExperience`, `signupFormats`, `signupFamilies`, …), creates
+  the account, signs it in and sends the file to admin review.
+
+The artist area:
+
+- `/{locale}/artist` — **artist dashboard** (server-rendered): identity + status, onboarding ribbon,
+  KPIs with 30-day trend arrows, work status, wallet & payout summary, delivery-at-a-glance
+  (colourways · files · total size · format spread), "make it sell better" hints (missing recommended
+  formats, single-colour works, missing previews), every work with its colour swatches and format
+  chips, latest ledger rows and the sales mix. Quick actions deep-link into the studio tabs.
+- `/{locale}/artist/marketplace` — the sales studio (`?tab=assets|upload|wallet|analytics|affiliate`).
+- `/{locale}/artist/portfolio` — the portfolio manager (patterns, products, profile, stats).
+- Signed-out visitors are redirected to login; a signed-in **buyer** is shown an honest upsell to the
+  designer registration instead of a form they cannot use (the artist APIs still enforce the role).
+
+Data for the dashboard comes from `src/lib/artist/dashboard.ts` (artist record + works with delivery
+detail + analytics with a previous-period comparison + wallet), so the page itself is a pure view.
 
 ## Academy
 

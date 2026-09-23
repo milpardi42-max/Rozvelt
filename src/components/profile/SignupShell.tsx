@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Logo } from "@/components/layout/Logo";
 import { href } from "@/lib/utils";
 import type { Locale } from "@/lib/i18n/types";
@@ -14,6 +15,14 @@ interface SignupShellProps {
   dict: { login: string; signup: string };
 }
 
+/**
+ * Buyer registration shell.
+ *
+ * Buyers keep the short form they always had (name, e-mail, password). Selling
+ * is a different door: the designer application at /creators/join collects the
+ * studio, the delivery formats and the product families — so this page only
+ * points at it instead of switching the account type here.
+ */
 export function SignupShell({ locale, image, dict }: SignupShellProps) {
   const router = useRouter();
   const [leaving, setLeaving] = useState<"manual" | "signup" | null>(null);
@@ -81,6 +90,22 @@ export function SignupShell({ locale, image, dict }: SignupShellProps) {
           <Logo className="auth-card__form-logo" />
           <h1 className="auth-card__form-title">{dict.signup}</h1>
           <AuthForm mode="signup" onSignupSuccess={handleSignupSuccess} />
+
+          {/* sellers have their own, richer door */}
+          <div className="mt-6 rounded-2xl border border-border bg-background-secondary p-4 text-start">
+            <p className="text-caption font-medium">{fa ? "طراح یا فروشنده هستید؟" : "Are you a designer or seller?"}</p>
+            <p className="mt-1 text-caption text-foreground-secondary">
+              {fa
+                ? "ثبت‌نام فروشندگان جداست: استودیو، فرمت‌های تحویل و دسته‌های کاری شما در یک پرونده‌ی سه‌گامی ثبت می‌شود."
+                : "Seller registration is separate: studio, delivery formats and product families in one three-step application."}
+            </p>
+            <Link
+              href={href(locale, "/creators/join")}
+              className="mt-3 inline-flex h-9 items-center rounded-full border border-border px-4 text-caption font-medium transition hover:border-foreground"
+            >
+              {fa ? "ثبت‌نام هنرمند / فروشنده" : "Artist / seller signup"}
+            </Link>
+          </div>
         </div>
       </div>
 

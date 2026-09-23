@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   BarChart3,
   Banknote,
@@ -123,10 +124,22 @@ const STATUS_TONE: Record<string, "success" | "warning" | "error" | "neutral" | 
   delisted: "neutral",
 };
 
+const STUDIO_TABS: Tab[] = ["assets", "upload", "wallet", "analytics", "affiliate"];
+
+function isStudioTab(value: string | null): value is Tab {
+  return value !== null && (STUDIO_TABS as string[]).includes(value);
+}
+
 export function ArtistStudio({ locale }: { locale: "fa" | "en" }) {
   useLocale();
   const fa = locale === "fa";
-  const [tab, setTab] = useState<Tab>("assets");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  /* ?tab= keeps the dashboard's quick actions working (and the tab shareable). */
+  const [tab, setTab] = useState<Tab>(() => {
+    const requested = searchParams.get("tab");
+    return isStudioTab(requested) ? requested : "assets";
+  });
   const [assets, setAssets] = useState<StudioAsset[]>([]);
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [wallet, setWallet] = useState<WalletData | null>(null);
@@ -187,6 +200,12 @@ export function ArtistStudio({ locale }: { locale: "fa" | "en" }) {
   useEffect(() => {
     void loadAll();
   }, [loadAll]);
+
+  useEffect(() => {
+    const current = new URLSearchParams(window.location.search).get("tab");
+    if (current === tab) return;
+    router.replace(`${window.location.pathname}?tab=${tab}`, { scroll: false });
+  }, [tab, router]);
 
   useEffect(() => {
     if (!notice) return;

@@ -35,12 +35,19 @@ check "/fa/verify" "verify console"
 check "/fa/verify/$SERIAL" "verify by serial"
 check "/en/verify/$SERIAL" "verify by serial (en)"
 check "/fa/delivery/not-a-real-token" "bogus delivery link (expect 200 + invalid notice)"
+check "/fa/signup" "buyer signup"
+check "/en/signup" "buyer signup (en)"
+check "/fa/creators/join" "seller registration (designer page)"
+check "/en/creators/join" "seller registration (en)"
 check "/fa/checkout/return?order=$OID&status=paid" "receipt page"
 
 echo
 echo "── authenticated pages"
 check "/fa/account/licenses" "license vault (admin session)"
+check "/fa/artist" "artist dashboard (new)"
+check "/fa/artist/portfolio" "artist portfolio manager"
 check "/fa/artist/marketplace" "artist studio"
+check "/fa/artist/marketplace?tab=upload" "studio deep link (upload tab)"
 check "/fa/admin/marketplace" "admin console (after redirect)"
 check "/admin/fa/marketplace" "admin console (real path)"
 
@@ -48,4 +55,5 @@ echo
 echo "── unauthorised expectations (no cookie)"
 nocookie() { printf "%-58s" "$2"; code=$(curl -s -o /dev/null -w "%{http_code}" -L -H 'cookie:' "$BASE$1"); echo "$code"; }
 nocookie "/fa/admin/marketplace" "admin console without session (redirect→login)"
+nocookie "/fa/artist" "artist dashboard without session (redirect→login)"
 nocookie "/fa/artist/marketplace" "artist studio without session"

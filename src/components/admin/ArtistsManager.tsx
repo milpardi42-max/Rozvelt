@@ -27,6 +27,7 @@ import {
   XCircle,
   Ban,
 } from "lucide-react";
+import { familyName } from "@/lib/data/families";
 import type { PublicUser } from "@/lib/data/users";
 import type { Artist, Pattern, SiteContent } from "@/lib/types";
 
@@ -325,6 +326,60 @@ function ArtistDetailDrawer({
                 <User className="h-3.5 w-3.5" />
                 هنرمند بدون حساب کاربری ثبت‌شده (محتوای اولیه سایت)
               </p>
+            </div>
+          )}
+
+          {/* Seller application (what the designer declared at registration) */}
+          {(artist.signupSpecialty ||
+            artist.signupStudio ||
+            artist.signupExperience ||
+            (artist.signupFormats && artist.signupFormats.length > 0) ||
+            (artist.signupFamilies && artist.signupFamilies.length > 0)) && (
+            <div className="rounded-xl border border-violet-100 bg-violet-50 px-4 py-3">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-violet-700">
+                <Palette className="h-3.5 w-3.5" />
+                پرونده‌ی فروشندگی (ثبت‌نام)
+              </p>
+              <dl className="space-y-1.5 text-xs">
+                {artist.signupStudio && (
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-violet-500">استودیو / برند</dt>
+                    <dd className="font-medium text-violet-900">{artist.signupStudio}</dd>
+                  </div>
+                )}
+                {artist.signupSpecialty && (
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-violet-500">حوزه‌ی فعالیت</dt>
+                    <dd className="font-medium text-violet-900">{artist.signupSpecialty}</dd>
+                  </div>
+                )}
+                {artist.signupExperience && (
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-violet-500">سابقه‌ی کار</dt>
+                    <dd className="font-medium text-violet-900" dir="ltr">{artist.signupExperience}</dd>
+                  </div>
+                )}
+                {artist.signupFormats && artist.signupFormats.length > 0 && (
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-violet-500">فرمت‌های اعلام‌شده</dt>
+                    <dd className="font-medium text-violet-900" dir="ltr">{artist.signupFormats.join(" · ")}</dd>
+                  </div>
+                )}
+                {artist.signupFamilies && artist.signupFamilies.length > 0 && (
+                  <div className="flex justify-between gap-3">
+                    <dt className="shrink-0 text-violet-500">دسته‌های کاری</dt>
+                    <dd className="text-end font-medium text-violet-900">
+                      {artist.signupFamilies.map((id) => familyName(id, "fa")).join("، ")}
+                    </dd>
+                  </div>
+                )}
+                {artist.signupTermsAt && (
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-violet-500">پذیرش شرایط</dt>
+                    <dd className="font-medium text-violet-900">{fmtDate(artist.signupTermsAt)}</dd>
+                  </div>
+                )}
+              </dl>
             </div>
           )}
 

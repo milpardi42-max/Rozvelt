@@ -18,6 +18,8 @@ bash scripts/marketplace-smoke/exclusive-e2e.sh   # exclusive sale delists, refu
 bash scripts/marketplace-smoke/artist-e2e.sh      # artist studio: prices, sale, payout, coupon
 bash scripts/marketplace-smoke/sub-e2e.sh         # download pass, covered download, cancel
 bash scripts/marketplace-smoke/family-e2e.sh      # product families: shop grouping, sidebar tree, ?family=
+bash scripts/marketplace-smoke/formats-e2e.sh     # colourways + PNG/JPG/preview/AI/PSD/SVG/EPS delivery
+bash scripts/marketplace-smoke/artist-dashboard-e2e.sh   # buyer/seller signup split + artist dashboard
 bash scripts/marketplace-smoke/pages.sh           # every storefront/admin page renders
 DATA=dist/.next/standalone/data \
 MARKETPLACE_MULTIPART_THRESHOLD_MB=5 \
@@ -34,6 +36,19 @@ Notes:
   nested sub-categories under «الگو» in the sidebar, `?family=<slug>` / `?family=other` isolation,
   that `?category=` still filters, and that the upload session rejects a missing/unknown `familyId`.
   It deletes the asset it uploads, so it can be re-run without polluting the store.
+- `formats-e2e.sh` uploads one design in **two colourways with all seven formats** (`mkformats.mjs`
+  builds the real files with `sharp`/`pdf-lib`), checks the refusal paths (`invalid_format`,
+  `unsupported_type`, `raster_required`, `invalid_signature`), publishes it, buys it once and downloads
+  all twelve deliverables — each must be byte-identical to what the artist uploaded.
+- `artist-dashboard-e2e.sh` is the registration rig: it asserts the buyer form kept its content and no
+  longer switches account type, that `/creators/join` offers the three-step seller application (studio,
+  formats, families, terms), that `POST /api/auth/signup` really stores that file on the Artist record
+  and refuses an incomplete application, that the admin sees it, and that `/artist` is the dashboard
+  (signed-out redirect, buyer upsell, artist KPIs/works/delivery/wallet) while `/artist/portfolio` still
+  serves the portfolio manager. It creates and deletes its own accounts. **Note:** the signup endpoint
+  throttles by IP (5 attempts/hour, in-process), so a repeated run in the same server process reports
+  the throttled checks as skips instead of passes, and a run that cannot register at all exits with
+  code **2** and tells you to restart the server (or wait), so a green run always means "verified".
 - The scripts print each step; `http-e2e.sh` also asserts that the downloaded bytes are byte-identical
   to the uploaded master and that a tampered token is rejected.
 - They write to the app's local storage backend (`data/objects` and `data/mk-*.json`). Point `DATA` at
