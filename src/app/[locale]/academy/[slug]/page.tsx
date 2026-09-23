@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Clock, Layers, Signal } from "lucide-react";
+import { Clock, Layers, Signal, Users } from "lucide-react";
 import { EducationCard } from "@/components/cards/EducationCard";
 import { PatternCard } from "@/components/cards/PatternCard";
 import { ProductCard } from "@/components/cards/ProductCard";
@@ -11,6 +11,11 @@ import { Badge } from "@/components/ui/Badge";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Reveal } from "@/components/ui/Reveal";
 import { CourseProgressSidebar } from "@/components/academy/CourseProgressSidebar";
+import { EnrollForm } from "@/components/academy/EnrollForm";
+import { VideoGrid, type AcademyVideoEntry } from "@/components/academy/VideoGrid";
+import { academyOverview } from "@/lib/data/academy";
+import { priceLabel } from "@/lib/utils";
+import { getAllReservations } from "@/lib/data/reservations";
 import { enrichEducation, enrichPattern, enrichProduct, getSite } from "@/lib/data/queries";
 import { dictionaries } from "@/lib/i18n/dictionary";
 import { LOCALES, type Locale } from "@/lib/i18n/types";
@@ -59,6 +64,13 @@ export default async function EducationDetail({ params }: Props) {
   if (!raw) notFound();
   const d = dictionaries[locale];
   const e = enrichEducation(site, raw);
+  const reservations = await getAllReservations();
+  const stats = academyOverview(site, reservations).bySlug[e.slug];
+  const courseVideos: AcademyVideoEntry[] = (e.videoFiles ?? []).map((video) => ({
+    video,
+    courseSlug: e.slug,
+    courseTitle: e.title,
+  }));
   const eventHost = e.liveEvent?.hostNameCustom && e.liveEvent.hostName
     ? t(e.liveEvent.hostName, locale)
     : null;
@@ -158,7 +170,15 @@ export default async function EducationDetail({ params }: Props) {
             {e.lessons > 1 && (
               <span className="inline-flex items-center gap-1">
                 <Layers className="h-3.5 w-3.5" />
-                {locale === "fa" ? faNum(e.lessons) : e.lessons} {d.common.lessons}
+                {locale === "fa" ? faNum(stats?.lessons ?? e.lessons) : stats?.lessons ?? e.lessons} {d.common.lessons}
+              </span>
+            )}
+            {(stats?.enrollments ?? 0) > 0 && (
+              <span className="inline-flex items-center gap-1 tabular">
+                <Users className="h-3.5 w-3.5" />
+                {locale === "fa"
+                  ? `${faNum(stats!.enrollments)} ثبت‌نام`
+                  : `${stats!.enrollments} enrolled`}
               </span>
             )}
           </div>
@@ -187,23 +207,36 @@ export default async function EducationDetail({ params }: Props) {
                   <span className="text-h4 font-semibold tabular text-foreground">
                     {formatPrice(e.price, locale)}
                   </span>
-                  {e.liveEvent?.isOnline && (e.type === "workshop" || e.type === "webinar") ? (
+                  {e.liveEvent?.isOnline && (e.type === "workshop" || e.type === "webinar") && (
                     <Link
                       href={href(locale, `/academy/${e.slug}/live`)}
-                      className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white hover:bg-accent/90 transition-colors"
+                      className="rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground hover:border-accent hover:text-accent transition-colors"
                     >
-                      {locale === "fa" ? "ثبت‌نام و ورود به رویداد" : "Register and join event"}
+                      {locale === "fa" ? "صفحه ورود به رویداد" : "Event access page"}
                     </Link>
-                  ) : (
-                    <button
-                      type="button"
-                      className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white hover:bg-accent/90 transition-colors"
-                    >
-                      {locale === "fa" ? "ثبت‌نام در دوره" : "Enroll now"}
-                    </button>
                   )}
                 </div>
               )}
+
+              {/* Real registration — stored in the academy panel */}
+              <EnrollForm
+                item={{
+                  slug: e.slug,
+                  title: e.title,
+                  type: e.type,
+                  price: e.price,
+                  paymentLabel: priceLabel(e.price, locale) ?? undefined,
+                }}
+                compact
+              />
+
+              {stats?.capacity ? (
+                <p className="text-caption text-foreground-secondary tabular">
+                  {locale === "fa"
+                    ? `${faNum(stats.enrollments)} صندلی از ${faNum(stats.capacity)} رزرو شده`
+                    : `${stats.enrollments} of ${stats.capacity} seats taken`}
+                </p>
+              ) : null}
 
               {/* Progress + lesson list (if lessonList present, full detail; else simple bar) */}
               {hasLessonList ? (
@@ -261,6 +294,21 @@ export default async function EducationDetail({ params }: Props) {
           </aside>
         </div>
       </section>
+
+      {courseVideos.length > 0 && (
+        <section className="container-x pt-4">
+          <SectionHeader
+            eyebrow={d.nav.education}
+            title={locale === "fa" ? "ویدیوهای این دوره" : "This course's videos"}
+            description={
+              locale === "fa"
+                ? "ویدیوهایی که در پنل آکادمی برای این دوره آپلود شده‌اند."
+                : "Videos uploaded for this course in the academy panel."
+            }
+          />
+          <VideoGrid entries={courseVideos} poster={e.image} />
+        </section>
+      )}
 
       {e.patterns.length > 0 && (
         <section className="bg-background-secondary">

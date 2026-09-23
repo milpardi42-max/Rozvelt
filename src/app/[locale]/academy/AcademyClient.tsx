@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import {
   BookOpen,
   Play,
@@ -10,15 +10,12 @@ import {
   Calendar,
   Clock,
   Signal,
-  Star,
   ChevronDown,
   CheckCircle2,
   Video,
   Layers,
-  Award,
   Filter,
   X,
-  ShoppingCart,
   Zap,
   Globe,
   Wifi,
@@ -27,6 +24,7 @@ import { cn, faNum, formatDuration, href, t } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Reveal } from "@/components/ui/Reveal";
 import { useLocale } from "@/components/providers/AppProviders";
+import { EnrollForm } from "@/components/academy/EnrollForm";
 import type { EducationCardData } from "@/components/cards/EducationCard";
 import type { Category } from "@/lib/types";
 
@@ -34,234 +32,186 @@ import type { Category } from "@/lib/types";
 type Tab = "all" | "course" | "workshop" | "webinar";
 type SortKey = "popular" | "newest" | "price_asc" | "price_desc";
 
+/** Real numbers computed on the server from published content + stored registrations. */
+export interface AcademyStats {
+  courses: number;
+  lessons: number;
+  minutes: number;
+  instructors: number;
+  enrollments: number;
+  students: number;
+}
+
+export interface AcademyItemStat {
+  enrollments: number;
+  capacity: number;
+  seatsLeft: number | null;
+  videos: number;
+  freeVideos: number;
+  lessons: number;
+  minutes: number;
+}
+
+export interface AcademyInstructorStat {
+  authorId: string;
+  items: number;
+  courses: number;
+  events: number;
+  lessons: number;
+  videos: number;
+}
+
 interface Props {
   items: EducationCardData[];
   categories: Category[];
+  stats: AcademyStats;
+  itemStats: Record<string, AcademyItemStat>;
+  instructorStats: AcademyInstructorStat[];
 }
 
-/* ─── Deterministic price simulation ─────────────────────────── */
-function getPrice(item: EducationCardData, locale: "fa" | "en"): { value: number; isFree: boolean } {
-  // Free if it's a very short item (< 30 min) or has no price
-  if (item.price) return { value: item.price[locale], isFree: item.price[locale] === 0 };
-  if (item.durationMin < 30) return { value: 0, isFree: true };
-  // Deterministic price based on item id hash
-  const hash = item.id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  if (locale === "fa") {
-    const base = [490_000, 690_000, 980_000, 1_200_000, 1_490_000];
-    return { value: base[hash % base.length], isFree: false };
-  } else {
-    const base = [29, 49, 69, 89, 119];
-    return { value: base[hash % base.length], isFree: false };
-  }
+/* ─── Real price helpers (no price set = free to watch) ─────── */
+function priceOf(item: EducationCardData, locale: "fa" | "en"): { value: number; isFree: boolean } {
+  const value = item.price?.[locale] ?? 0;
+  return { value, isFree: value <= 0 };
 }
 
 function formatItemPrice(item: EducationCardData, locale: "fa" | "en"): string {
-  const { value, isFree } = getPrice(item, locale);
+  const { value, isFree } = priceOf(item, locale);
   if (isFree) return locale === "fa" ? "رایگان" : "Free";
-  if (locale === "fa") return `${faNum(value.toLocaleString("en-US"))} تومان`;
-  return `$${value}`;
+  return locale === "fa" ? `${faNum(value.toLocaleString("en-US"))} تومان` : `$${value}`;
 }
 
-/* ─── Enroll / Buy Modal ─────────────────────────────────────── */
-function EnrollModal({ item, onClose }: { item: EducationCardData; onClose: () => void }) {
+function lessonsOf(item: EducationCardData): number {
+  return item.lessonList?.length || item.lessons || 0;
+}
+
+function minutesOf(item: EducationCardData): number {
+  const listed = item.lessonList?.reduce((sum, lesson) => sum + (lesson.durationMin ?? 0), 0) ?? 0;
+  return listed || item.durationMin;
+}
+
+/* ─── Enroll / register modal ────────────────────────────────── */
+function EnrollModal({
+  item,
+  stat,
+  onClose,
+}: {
+  item: EducationCardData;
+  stat?: AcademyItemStat;
+  onClose: () => void;
+}) {
   const { locale, dict } = useLocale();
-  const [step, setStep] = useState<"details" | "form" | "success">("details");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [, startTransition] = useTransition();
   const isFA = locale === "fa";
-  const { value: priceValue, isFree } = getPrice(item, locale);
-  const currency = isFA ? "تومان" : "USD";
-  const priceStr = isFree ? (isFA ? "رایگان" : "Free") : (isFA ? `${faNum(priceValue.toLocaleString("en-US"))}` : `$${priceValue}`);
+  const { value: priceValue, isFree } = priceOf(item, locale);
+  const priceLabel = isFree ? null : isFA ? `${faNum(priceValue.toLocaleString("en-US"))} تومان` : `$${priceValue}`;
 
-  const typeLabel = isFA
-    ? item.type === "course" ? "دوره آموزشی"
-    : item.type === "workshop" ? "ورکشاپ"
-    : "وبینار"
-    : item.type === "course" ? "Course"
-    : item.type === "workshop" ? "Workshop"
-    : "Webinar";
+  const preview = item.videoFiles?.find((video) => video.free) ?? item.videoFiles?.[0];
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setSubmitting(true);
-    try {
-      if (item.type === "workshop" || item.type === "webinar") {
-        const response = await fetch(`/api/webinar/${item.slug}/signal`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "register",
-            viewerId: `v-${btoa(email.trim().toLowerCase()).replace(/[^a-z0-9]/gi, "").slice(0, 12)}-${item.slug.slice(0, 6)}`,
-            name: name.trim(),
-            email: email.trim().toLowerCase(),
-          }),
-        });
-        if (!response.ok) throw new Error("registration_failed");
-      }
-      startTransition(() => setStep("success"));
-    } catch {
-      setError(isFA ? "ثبت‌نام انجام نشد. دوباره تلاش کنید." : "Registration failed. Please try again.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
+  const typeLabel =
+    item.type === "course"
+      ? isFA
+        ? "دوره آموزشی"
+        : "Course"
+      : item.type === "workshop"
+        ? isFA
+          ? "ورکشاپ"
+          : "Workshop"
+        : isFA
+          ? "وبینار"
+          : "Webinar";
+
+  const learnPoints = (item.lessonList ?? []).slice(0, 3).map((lesson) => t(lesson.title, locale));
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-[#0a0d13]/75 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-surface shadow-elevated"
+        className="relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-surface shadow-elevated"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header image */}
+        {/* Header: the course's own preview video when the panel has one */}
         <div className="relative h-40 overflow-hidden bg-[#0f141c]">
-          <Image src={item.image} alt="" fill sizes="600px" className="object-cover opacity-60" />
+          {preview ? (
+            <video src={preview.url} poster={item.image} muted loop autoPlay playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover opacity-80" />
+          ) : (
+            <Image src={item.image} alt="" fill sizes="600px" className="object-cover opacity-60" />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-[#0f141c]/80 to-transparent" />
           <button
             onClick={onClose}
-            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white hover:bg-black/60"
+            className="absolute end-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white hover:bg-black/60"
+            aria-label={isFA ? "بستن" : "Close"}
           >
             <X className="h-4 w-4" />
           </button>
-          <div className="absolute bottom-4 left-5 right-5">
+          <div className="absolute bottom-4 inset-x-5">
             <p className="text-caption text-white/70">{typeLabel}</p>
             <h3 className="font-semibold text-white text-balance line-clamp-2">{t(item.title, locale)}</h3>
           </div>
         </div>
 
         <div className="p-6">
-          {step === "details" && (
-            <>
-              <div className="mb-5 grid grid-cols-2 gap-3 text-sm">
-                <div className="flex items-center gap-2 rounded-lg bg-background-secondary px-3 py-2.5">
-                  <Clock className="h-4 w-4 text-accent shrink-0" />
-                  <span className="text-foreground-secondary">{formatDuration(item.durationMin, locale, dict.common)}</span>
-                </div>
-                <div className="flex items-center gap-2 rounded-lg bg-background-secondary px-3 py-2.5">
-                  <Signal className="h-4 w-4 text-accent shrink-0" />
-                  <span className="text-foreground-secondary">{dict.common[item.difficulty]}</span>
-                </div>
-                <div className="flex items-center gap-2 rounded-lg bg-background-secondary px-3 py-2.5">
-                  <Layers className="h-4 w-4 text-accent shrink-0" />
-                  <span className="text-foreground-secondary">
-                    {isFA ? faNum(item.lessons) : item.lessons} {dict.common.lessons}
+          <div className="mb-5 grid grid-cols-2 gap-3 text-sm">
+            <div className="flex items-center gap-2 rounded-lg bg-background-secondary px-3 py-2.5">
+              <Clock className="h-4 w-4 text-accent shrink-0" />
+              <span className="text-foreground-secondary tabular">{formatDuration(minutesOf(item), locale, dict.common)}</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg bg-background-secondary px-3 py-2.5">
+              <Signal className="h-4 w-4 text-accent shrink-0" />
+              <span className="text-foreground-secondary">{dict.common[item.difficulty]}</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg bg-background-secondary px-3 py-2.5">
+              <Layers className="h-4 w-4 text-accent shrink-0" />
+              <span className="text-foreground-secondary tabular">
+                {isFA ? faNum(lessonsOf(item)) : lessonsOf(item)} {dict.common.lessons}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg bg-background-secondary px-3 py-2.5">
+              {(stat?.enrollments ?? 0) > 0 ? (
+                <>
+                  <Users className="h-4 w-4 text-accent shrink-0" />
+                  <span className="text-foreground-secondary tabular">
+                    {isFA ? `${faNum(stat!.enrollments)} ثبت‌نام` : `${stat!.enrollments} enrolled`}
                   </span>
-                </div>
-                <div className="flex items-center gap-2 rounded-lg bg-background-secondary px-3 py-2.5">
-                  <Award className="h-4 w-4 text-accent shrink-0" />
-                  <span className="text-foreground-secondary">{isFA ? "گواهینامه" : "Certificate"}</span>
-                </div>
-              </div>
-
-              {/* What you'll learn */}
-              <div className="mb-5 rounded-lg border border-border p-4">
-                <p className="text-caption font-semibold text-foreground mb-3">{isFA ? "در این دوره یاد می‌گیرید:" : "What you'll learn:"}</p>
-                <ul className="space-y-2">
-                  {[
-                    isFA ? "مفاهیم پایه‌ای طراحی" : "Core design concepts",
-                    isFA ? "تکنیک‌های حرفه‌ای" : "Professional techniques",
-                    isFA ? "پروژه عملی نهایی" : "Hands-on final project",
-                  ].map((point, i) => (
-                    <li key={i} className="flex items-start gap-2 text-body-sm text-foreground-secondary">
-                      <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />
-                      {point}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="flex items-center justify-between border-t border-border pt-5">
-                <div>
-                  {isFree ? (
-                    <p className="font-display text-h3 text-success">{dict.common.free}</p>
-                  ) : (
-                    <p className="font-display text-h3 text-foreground tabular">
-                      {priceStr}
-                      {!isFree && <span className="ms-1 text-caption font-normal text-foreground-secondary">{currency}</span>}
-                    </p>
-                  )}
-                </div>
-                <Button onClick={() => setStep("form")} size="lg" variant="accent">
-                  <ShoppingCart className="h-4 w-4" />
-                  {isFree ? (isFA ? "ثبت‌نام رایگان" : "Enroll Free") : (isFA ? "خرید و ثبت‌نام" : "Buy & Enroll")}
-                </Button>
-              </div>
-            </>
-          )}
-
-          {step === "form" && (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <h4 className="font-semibold text-foreground">{isFA ? "اطلاعات ثبت‌نام" : "Enrollment details"}</h4>
-              <div>
-                <label className="mb-1.5 block text-caption text-foreground-secondary">{dict.common.name}</label>
-                <input
-                  required
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={isFA ? "نام و نام خانوادگی" : "Full name"}
-                  className="h-11 w-full rounded-lg border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none transition-colors"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-caption text-foreground-secondary">{dict.common.email}</label>
-                <input
-                  required
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder={isFA ? "ایمیل شما" : "Your email"}
-                  className="h-11 w-full rounded-lg border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none transition-colors"
-                />
-              </div>
-              {!isFree && (
-                <div>
-                  <label className="mb-1.5 block text-caption text-foreground-secondary">{dict.common.phone}</label>
-                  <input
-                    type="tel"
-                    placeholder={isFA ? "شماره تماس" : "Phone number"}
-                    className="h-11 w-full rounded-lg border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none transition-colors"
-                  />
-                </div>
-              )}
-              <div className="flex gap-3 pt-2">
-                <Button type="button" variant="outline" className="flex-1" onClick={() => setStep("details")}>
-                  {isFA ? "بازگشت" : "Back"}
-                </Button>
-                <Button type="submit" variant="accent" className="flex-1" disabled={submitting}>
-                  {isFree ? (isFA ? "ثبت‌نام" : "Enroll") : (isFA ? "پرداخت" : "Pay now")}
-                </Button>
-              </div>
-              {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
-            </form>
-          )}
-
-          {step === "success" && (
-            <div className="py-6 text-center">
-              <CheckCircle2 className="mx-auto mb-4 h-14 w-14 text-success" />
-              <h4 className="font-display text-h3 text-foreground">{isFA ? "ثبت‌نام موفق!" : "You're enrolled!"}</h4>
-              <p className="mt-2 text-body-sm text-foreground-secondary">
-                {isFA ? "ثبت‌نام شما انجام شد. از همین‌جا وارد رویداد شوید." : "You are registered. Enter the event from here."}
-              </p>
-              {(item.type === "workshop" || item.type === "webinar") && item.liveEvent?.isOnline ? (
-                <Link
-                  href={href(locale, `/academy/${item.slug}/live`)}
-                  className="mt-6 inline-flex items-center justify-center rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent/90"
-                  onClick={onClose}
-                >
-                  {item.liveEvent.status === "live"
-                    ? (isFA ? "ورود به رویداد زنده" : "Enter live event")
-                    : (isFA ? "مشاهده صفحه ورود" : "Open event access page")}
-                </Link>
+                </>
               ) : (
-                <Button className="mt-6" onClick={onClose}>{isFA ? "بازگشت به آکادمی" : "Back to Academy"}</Button>
+                <>
+                  <Video className="h-4 w-4 text-accent shrink-0" />
+                  <span className="text-foreground-secondary tabular">
+                    {isFA ? `${faNum(stat?.videos ?? 0)} ویدیو` : `${stat?.videos ?? 0} videos`}
+                  </span>
+                </>
               )}
             </div>
+          </div>
+
+          {/* Real curriculum points from the lesson list the admin published */}
+          {learnPoints.length > 0 && (
+            <div className="mb-5 rounded-lg border border-border p-4">
+              <p className="text-caption font-semibold text-foreground mb-3">
+                {isFA ? "در این دوره یاد می‌گیرید:" : "What you'll learn:"}
+              </p>
+              <ul className="space-y-2">
+                {learnPoints.map((point) => (
+                  <li key={point} className="flex items-start gap-2 text-body-sm text-foreground-secondary">
+                    <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />
+                    {point}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
+
+          <div className="mb-5 flex items-center justify-between border-t border-border pt-5">
+            <span className="text-caption text-foreground-secondary">{isFA ? "هزینه" : "Fee"}</span>
+            {isFree ? (
+              <span className="font-display text-h4 text-success">{dict.common.free}</span>
+            ) : (
+              <span className="font-display text-h4 text-foreground tabular">{priceLabel}</span>
+            )}
+          </div>
+
+          <EnrollForm item={{ ...item, paymentLabel: priceLabel ?? undefined }} onDone={undefined} />
         </div>
       </div>
     </div>
@@ -280,10 +230,18 @@ function StatCard({ icon: Icon, value, label }: { icon: React.ElementType; value
 }
 
 /* ─── Course Card (grid) ─────────────────────────────────────── */
-function CourseCard({ item, onEnroll }: { item: EducationCardData; onEnroll: (item: EducationCardData) => void }) {
+function CourseCard({
+  item,
+  onEnroll,
+  stat,
+}: {
+  item: EducationCardData;
+  onEnroll: (item: EducationCardData) => void;
+  stat?: AcademyItemStat;
+}) {
   const { locale, dict } = useLocale();
   const isFA = locale === "fa";
-  const { isFree } = getPrice(item, locale);
+  const { isFree } = priceOf(item, locale);
   const priceStr = formatItemPrice(item, locale);
   const url = href(locale, `/academy/${item.slug}`);
 
@@ -300,12 +258,6 @@ function CourseCard({ item, onEnroll }: { item: EducationCardData; onEnroll: (it
     article: isFA ? "مقاله" : "Article",
   };
 
-  // Deterministic star rating
-  const ratingHash = item.id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  const ratingDecimal = (ratingHash % 9) + 1;
-  const ratingStr = `4.${ratingDecimal}`;
-  const reviewCount = 20 + (ratingHash % 80);
-
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-border bg-surface transition-all duration-300 hover:-translate-y-1 hover:shadow-medium">
       {/* Thumbnail */}
@@ -318,30 +270,29 @@ function CourseCard({ item, onEnroll }: { item: EducationCardData; onEnroll: (it
           className="img-zoom object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-        {/* Type badge */}
-        <div className="absolute left-3 top-3">
+        <div className="absolute start-3 top-3">
           <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-caption font-medium backdrop-blur-sm", typeColors[item.type] ?? typeColors.course)}>
             {typeLabels[item.type] ?? dict.common[item.type]}
           </span>
         </div>
-        {/* Play overlay */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
-            <Play className="h-5 w-5 fill-white text-white ms-0.5" />
+        {/* Real video count over the artwork */}
+        {(stat?.videos ?? 0) > 0 && (
+          <div className="absolute bottom-3 start-3 inline-flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-caption text-white backdrop-blur-sm tabular">
+            <Play className="h-3 w-3 fill-white" />
+            {isFA ? `${faNum(stat!.videos)} ویدیو` : `${stat!.videos} videos`}
           </div>
-        </div>
-        {/* Popular badge */}
+        )}
+        {/* Popular badge — set by the admin in the panel */}
         {item.popular && (
-          <div className="absolute right-3 top-3">
+          <div className="absolute end-3 top-3">
             <span className="inline-flex items-center gap-1 rounded-full bg-warning/90 px-2.5 py-0.5 text-caption font-medium text-white backdrop-blur-sm">
               <Zap className="h-3 w-3 fill-current" />
               {isFA ? "محبوب" : "Popular"}
             </span>
           </div>
         )}
-        {/* Featured ribbon */}
         {item.featured && !item.popular && (
-          <div className="absolute right-3 top-3">
+          <div className="absolute end-3 top-3">
             <span className="inline-flex items-center gap-1 rounded-full bg-accent/90 px-2.5 py-0.5 text-caption font-medium text-white backdrop-blur-sm">
               {isFA ? "منتخب" : "Featured"}
             </span>
@@ -351,24 +302,22 @@ function CourseCard({ item, onEnroll }: { item: EducationCardData; onEnroll: (it
 
       {/* Body */}
       <div className="flex flex-1 flex-col p-5">
-        {item.category && (
-          <p className="text-caption text-accent mb-1.5">{t(item.category.name, locale)}</p>
-        )}
+        {item.category && <p className="text-caption text-accent mb-1.5">{t(item.category.name, locale)}</p>}
         <Link href={url} className="block font-semibold text-foreground hover:text-accent transition-colors line-clamp-2 leading-snug mb-2">
           {t(item.title, locale)}
         </Link>
         <p className="text-body-sm text-foreground-secondary line-clamp-2 mb-4">{t(item.excerpt, locale)}</p>
 
-        {/* Meta row */}
+        {/* Meta row — every value comes from the item itself */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-caption text-foreground-secondary mb-3">
-          <span className="inline-flex items-center gap-1">
+          <span className="inline-flex items-center gap-1 tabular">
             <Clock className="h-3.5 w-3.5" />
-            {formatDuration(item.durationMin, locale, dict.common)}
+            {formatDuration(minutesOf(item), locale, dict.common)}
           </span>
-          {item.lessons > 1 && (
-            <span className="inline-flex items-center gap-1">
+          {lessonsOf(item) > 1 && (
+            <span className="inline-flex items-center gap-1 tabular">
               <Layers className="h-3.5 w-3.5" />
-              {isFA ? faNum(item.lessons) : item.lessons} {dict.common.lessons}
+              {isFA ? faNum(lessonsOf(item)) : lessonsOf(item)} {dict.common.lessons}
             </span>
           )}
           <span className="inline-flex items-center gap-1">
@@ -377,17 +326,15 @@ function CourseCard({ item, onEnroll }: { item: EducationCardData; onEnroll: (it
           </span>
         </div>
 
-        {/* Stars */}
-        <div className="flex items-center gap-1 text-caption mb-4">
-          {[1, 2, 3, 4, 5].map((s) => (
-            <Star key={s} className={cn("h-3.5 w-3.5", s <= 4 ? "fill-warning text-warning" : "fill-muted/30 text-muted")} />
-          ))}
-          <span className="text-foreground-secondary ms-1.5 tabular">{isFA ? faNum(ratingStr) : ratingStr}</span>
-          <span className="text-muted ms-0.5">({isFA ? faNum(reviewCount) : reviewCount})</span>
-        </div>
+        {/* Real registrations for this item */}
+        {(stat?.enrollments ?? 0) > 0 && (
+          <div className="mb-4 inline-flex items-center gap-1.5 text-caption text-success tabular">
+            <Users className="h-3.5 w-3.5" />
+            {isFA ? `${faNum(stat!.enrollments)} نفر ثبت‌نام کرده‌اند` : `${stat!.enrollments} enrolled`}
+          </div>
+        )}
 
         <div className="mt-auto flex items-center justify-between border-t border-border pt-4">
-          {/* Instructor */}
           {item.author ? (
             <div className="flex items-center gap-2 min-w-0">
               <span className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full">
@@ -398,7 +345,6 @@ function CourseCard({ item, onEnroll }: { item: EducationCardData; onEnroll: (it
           ) : (
             <span />
           )}
-          {/* Price */}
           <div className="shrink-0">
             {isFree ? (
               <span className="font-semibold text-success">{dict.common.free}</span>
@@ -416,8 +362,12 @@ function CourseCard({ item, onEnroll }: { item: EducationCardData; onEnroll: (it
           className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover active:scale-[0.98]"
         >
           {isFree
-            ? (isFA ? "ثبت‌نام رایگان" : "Enroll Free")
-            : (isFA ? "خرید دوره" : "Buy Course")}
+            ? isFA
+              ? "شروع رایگان"
+              : "Start free"
+            : isFA
+              ? "ثبت‌نام در دوره"
+              : "Enroll in course"}
         </button>
       </div>
     </article>
@@ -425,12 +375,22 @@ function CourseCard({ item, onEnroll }: { item: EducationCardData; onEnroll: (it
 }
 
 /* ─── Event / Workshop Row ───────────────────────────────────── */
-function EventRow({ item, onEnroll }: { item: EducationCardData; onEnroll: (item: EducationCardData) => void }) {
+function EventRow({
+  item,
+  onEnroll,
+  stat,
+}: {
+  item: EducationCardData;
+  onEnroll: (item: EducationCardData) => void;
+  stat?: AcademyItemStat;
+}) {
   const { locale, dict } = useLocale();
   const isFA = locale === "fa";
-  const { isFree } = getPrice(item, locale);
+  const { isFree } = priceOf(item, locale);
   const priceStr = formatItemPrice(item, locale);
   const url = href(locale, `/academy/${item.slug}`);
+  const seatsLeft = stat?.seatsLeft ?? null;
+  const capacity = stat?.capacity ?? 0;
 
   return (
     <Reveal>
@@ -438,10 +398,11 @@ function EventRow({ item, onEnroll }: { item: EducationCardData; onEnroll: (item
         <Link href={url} className="relative h-28 w-full shrink-0 overflow-hidden rounded-lg bg-background-secondary sm:h-24 sm:w-36">
           <Image src={item.image} alt="" fill sizes="144px" className="img-zoom object-cover" />
         </Link>
-        <div className="flex flex-1 flex-col gap-1.5 min-w-0">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-caption font-medium bg-success/10 text-success">
-              <Wifi className="h-3 w-3" />{isFA ? "رویداد زنده" : "Live Event"}
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-0.5 text-caption font-medium text-success">
+              <Wifi className="h-3 w-3" />
+              {isFA ? "رویداد زنده" : "Live Event"}
             </span>
             {item.popular && (
               <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-0.5 text-caption font-medium text-warning">
@@ -454,23 +415,55 @@ function EventRow({ item, onEnroll }: { item: EducationCardData; onEnroll: (item
             {t(item.title, locale)}
           </Link>
           <p className="text-body-sm text-foreground-secondary line-clamp-1">{t(item.excerpt, locale)}</p>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-caption text-foreground-secondary mt-0.5">
-            <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{formatDuration(item.durationMin, locale, dict.common)}</span>
-            <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" />{isFA ? "ظرفیت محدود" : "Limited seats"}</span>
-            <span className="inline-flex items-center gap-1"><Globe className="h-3.5 w-3.5" />{isFA ? "آنلاین" : "Online"}</span>
+          <div className="mt-0.5 flex flex-wrap gap-x-4 gap-y-1 text-caption text-foreground-secondary">
+            <span className="inline-flex items-center gap-1 tabular">
+              <Clock className="h-3.5 w-3.5" />
+              {formatDuration(minutesOf(item), locale, dict.common)}
+            </span>
+            {/* Real seat situation, counted from stored registrations */}
+            <span className="inline-flex items-center gap-1 tabular">
+              <Users className="h-3.5 w-3.5" />
+              {capacity > 0
+                ? isFA
+                  ? `${faNum(stat?.enrollments ?? 0)} از ${faNum(capacity)} صندلی پر شده`
+                  : `${stat?.enrollments ?? 0} of ${capacity} seats taken`
+                : isFA
+                  ? `${faNum(stat?.enrollments ?? 0)} ثبت‌نام`
+                  : `${stat?.enrollments ?? 0} enrolled`}
+            </span>
+            {item.liveEvent?.startsAt && (
+              <span className="inline-flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5" />
+                {new Intl.DateTimeFormat(isFA ? "fa-IR" : "en-GB", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                }).format(new Date(item.liveEvent.startsAt))}
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1">
+              <Globe className="h-3.5 w-3.5" />
+              {isFA ? "آنلاین" : "Online"}
+            </span>
           </div>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-3 sm:items-end">
+        <div className="flex shrink-0 flex-col items-end gap-3">
           {isFree ? (
             <span className="font-semibold text-success">{dict.common.free}</span>
           ) : (
-            <span className="font-display text-h4 text-foreground tabular whitespace-nowrap">{priceStr}</span>
+            <span className="font-display text-h4 whitespace-nowrap text-foreground tabular">{priceStr}</span>
           )}
           <button
             onClick={() => onEnroll(item)}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground hover:border-accent active:scale-[0.98]"
+            disabled={seatsLeft !== null && seatsLeft <= 0}
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-accent hover:bg-accent hover:text-accent-foreground active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isFA ? "ثبت‌نام" : "Register"}
+            {seatsLeft !== null && seatsLeft <= 0
+              ? isFA
+                ? "تکمیل ظرفیت"
+                : "Full"
+              : isFA
+                ? "ثبت‌نام"
+                : "Register"}
           </button>
         </div>
       </div>
@@ -479,11 +472,10 @@ function EventRow({ item, onEnroll }: { item: EducationCardData; onEnroll: (item
 }
 
 /* ─── Instructor Card ────────────────────────────────────────── */
-function InstructorCard({ item }: { item: EducationCardData }) {
+function InstructorCard({ item, stat }: { item: EducationCardData; stat?: AcademyInstructorStat }) {
   const { locale, dict } = useLocale();
   const isFA = locale === "fa";
   if (!item.author) return null;
-  const count = 1; // placeholder
 
   return (
     <div className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4">
@@ -491,10 +483,12 @@ function InstructorCard({ item }: { item: EducationCardData }) {
         <Image src={item.author.avatar} alt="" fill sizes="56px" className="object-cover" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="font-semibold text-foreground truncate">{t(item.author.name, locale)}</p>
-        <p className="text-body-sm text-foreground-secondary truncate">{t(item.author.profession, locale)}</p>
-        <p className="text-caption text-muted mt-0.5">
-          {isFA ? `${faNum(count)} دوره` : `${count} course`}
+        <p className="truncate font-semibold text-foreground">{t(item.author.name, locale)}</p>
+        <p className="truncate text-body-sm text-foreground-secondary">{t(item.author.profession, locale)}</p>
+        <p className="mt-0.5 text-caption text-muted tabular">
+          {isFA
+            ? `${faNum(stat?.courses ?? 0)} دوره · ${faNum(stat?.events ?? 0)} رویداد · ${faNum(stat?.lessons ?? 0)} درس`
+            : `${stat?.courses ?? 0} courses · ${stat?.events ?? 0} events · ${stat?.lessons ?? 0} lessons`}
         </p>
       </div>
       <Link href={href(locale, `/artists/${item.author.slug}`)} className="shrink-0 text-caption text-accent hover:underline">
@@ -505,7 +499,7 @@ function InstructorCard({ item }: { item: EducationCardData }) {
 }
 
 /* ─── Main Client Component ──────────────────────────────────── */
-export function AcademyClient({ items, categories }: Props) {
+export function AcademyClient({ items, categories, stats, itemStats, instructorStats }: Props) {
   const { locale, dict } = useLocale();
   const isFA = locale === "fa";
   const [activeTab, setActiveTab] = useState<Tab>("all");
@@ -522,38 +516,39 @@ export function AcademyClient({ items, categories }: Props) {
   ];
 
   const filtered = items.filter((item) => {
-    const tabMatch =
-      activeTab === "all" ||
-      item.type === activeTab;
+    const tabMatch = activeTab === "all" || item.type === activeTab;
     const catMatch = activeCategory === "all" || item.categoryId === activeCategory;
     return tabMatch && catMatch;
   });
 
+  const enrollments = (item: EducationCardData) => itemStats[item.slug]?.enrollments ?? 0;
+
   const sorted = [...filtered].sort((a, b) => {
-    if (sortKey === "popular") return (b.popular ? 1 : 0) - (a.popular ? 1 : 0) || (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
+    if (sortKey === "popular") {
+      return (
+        enrollments(b) - enrollments(a) ||
+        (b.popular ? 1 : 0) - (a.popular ? 1 : 0) ||
+        (b.featured ? 1 : 0) - (a.featured ? 1 : 0)
+      );
+    }
     if (sortKey === "newest") return b.publishedAt.localeCompare(a.publishedAt);
-    const pa = getPrice(a, locale).value;
-    const pb = getPrice(b, locale).value;
+    const pa = priceOf(a, locale).value;
+    const pb = priceOf(b, locale).value;
     if (sortKey === "price_asc") return pa - pb;
     if (sortKey === "price_desc") return pb - pa;
     return 0;
   });
 
-  // Split by layout: workshops and webinars use EventRow; courses use CourseCard
   const gridItems = sorted.filter((i) => i.type === "course");
   const eventItems = sorted.filter((i) => i.type === "workshop" || i.type === "webinar");
 
-  // Stats
-  const totalCourses = items.filter((i) => i.type === "course").length;
-  const totalStudents = items.reduce((acc, i) => acc + i.lessons * 12, 0);
-  const totalInstructors = new Set(items.map((i) => i.authorId)).size;
   const n = (v: number) => (isFA ? faNum(v) : String(v));
 
-  // Featured instructors (unique authors from all items)
   const uniqueInstructorItems = items.reduce<EducationCardData[]>((acc, item) => {
     if (item.author && !acc.some((x) => x.authorId === item.authorId)) acc.push(item);
     return acc;
   }, []);
+  const statFor = (authorId: string) => instructorStats.find((s) => s.authorId === authorId);
 
   return (
     <>
@@ -561,7 +556,6 @@ export function AcademyClient({ items, categories }: Props) {
       <div className="sticky top-[var(--header-h-compact)] z-30 border-b border-border bg-background/95 backdrop-blur-md">
         <div className="container-x">
           <div className="flex items-center gap-2 overflow-x-auto py-3 no-scrollbar">
-            {/* Tabs */}
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
@@ -572,7 +566,7 @@ export function AcademyClient({ items, categories }: Props) {
                     "inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all",
                     activeTab === tab.key
                       ? "bg-primary text-primary-foreground shadow-soft"
-                      : "bg-background-secondary text-foreground-secondary hover:text-foreground"
+                      : "bg-background-secondary text-foreground-secondary hover:text-foreground",
                   )}
                 >
                   <Icon className="h-3.5 w-3.5" />
@@ -583,12 +577,11 @@ export function AcademyClient({ items, categories }: Props) {
 
             <div className="flex-1" />
 
-            {/* Filter toggle */}
             <button
               onClick={() => setShowFilters((v) => !v)}
               className={cn(
                 "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-all",
-                showFilters ? "border-accent text-accent bg-accent-soft" : "border-border text-foreground-secondary hover:text-foreground"
+                showFilters ? "border-accent bg-accent-soft text-accent" : "border-border text-foreground-secondary hover:text-foreground",
               )}
             >
               <Filter className="h-3.5 w-3.5" />
@@ -596,12 +589,11 @@ export function AcademyClient({ items, categories }: Props) {
               {activeCategory !== "all" && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
             </button>
 
-            {/* Sort */}
             <div className="relative shrink-0">
               <select
                 value={sortKey}
                 onChange={(e) => setSortKey(e.target.value as SortKey)}
-                className="h-9 appearance-none rounded-full border border-border bg-background ps-4 pe-8 text-sm text-foreground cursor-pointer focus:border-accent focus:outline-none"
+                className="h-9 cursor-pointer appearance-none rounded-full border border-border bg-background ps-4 pe-8 text-sm text-foreground focus:border-accent focus:outline-none"
               >
                 <option value="popular">{isFA ? "محبوب‌ترین" : "Most popular"}</option>
                 <option value="newest">{isFA ? "جدیدترین" : "Newest"}</option>
@@ -612,7 +604,6 @@ export function AcademyClient({ items, categories }: Props) {
             </div>
           </div>
 
-          {/* Category filter panel */}
           {showFilters && (
             <div className="flex flex-wrap items-center gap-2 border-t border-border py-3 pb-3.5">
               <span className="text-caption text-muted me-1">{dict.nav.categories}:</span>
@@ -620,9 +611,7 @@ export function AcademyClient({ items, categories }: Props) {
                 onClick={() => setActiveCategory("all")}
                 className={cn(
                   "rounded-full px-3 py-1 text-caption font-medium transition-all",
-                  activeCategory === "all"
-                    ? "bg-accent text-accent-foreground"
-                    : "border border-border text-foreground-secondary hover:border-accent hover:text-accent"
+                  activeCategory === "all" ? "bg-accent text-accent-foreground" : "border border-border text-foreground-secondary hover:border-accent hover:text-accent",
                 )}
               >
                 {dict.common.all}
@@ -633,19 +622,14 @@ export function AcademyClient({ items, categories }: Props) {
                   onClick={() => setActiveCategory(c.id)}
                   className={cn(
                     "rounded-full px-3 py-1 text-caption font-medium transition-all",
-                    activeCategory === c.id
-                      ? "bg-accent text-accent-foreground"
-                      : "border border-border text-foreground-secondary hover:border-accent hover:text-accent"
+                    activeCategory === c.id ? "bg-accent text-accent-foreground" : "border border-border text-foreground-secondary hover:border-accent hover:text-accent",
                   )}
                 >
                   {t(c.name, locale)}
                 </button>
               ))}
               {activeCategory !== "all" && (
-                <button
-                  onClick={() => setActiveCategory("all")}
-                  className="inline-flex items-center gap-1 text-caption text-muted hover:text-foreground"
-                >
+                <button onClick={() => setActiveCategory("all")} className="inline-flex items-center gap-1 text-caption text-muted hover:text-foreground">
                   <X className="h-3 w-3" />
                   {dict.common.clear}
                 </button>
@@ -655,23 +639,30 @@ export function AcademyClient({ items, categories }: Props) {
         </div>
       </div>
 
-      {/* ── Stats bar ─────────────────────────────────────────── */}
+      {/* ── Stats bar — computed from published content and stored registrations ── */}
       <div className="container-x py-8">
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <StatCard icon={BookOpen} value={n(totalCourses)} label={isFA ? "دوره آموزشی" : "Courses"} />
-          <StatCard icon={Users} value={`${n(totalStudents)}+`} label={isFA ? "دانشجو" : "Students"} />
-          <StatCard icon={Award} value={n(totalInstructors)} label={isFA ? "مدرس حرفه‌ای" : "Instructors"} />
-          <StatCard icon={Star} value={isFA ? "۴.۸" : "4.8"} label={isFA ? "میانگین امتیاز" : "Avg. rating"} />
+          <StatCard icon={BookOpen} value={n(stats.courses)} label={isFA ? "دوره آموزشی" : "Courses"} />
+          <StatCard icon={Video} value={n(stats.lessons)} label={isFA ? "درس" : "Lessons"} />
+          <StatCard icon={Users} value={n(stats.instructors)} label={isFA ? "مدرس" : "Instructors"} />
+          <StatCard
+            icon={Calendar}
+            value={n(stats.enrollments)}
+            label={isFA ? "ثبت‌نام واقعی" : "Real enrollments"}
+          />
         </div>
+        <p className="mt-3 text-caption text-muted">
+          {isFA
+            ? `مجموع ${faNum(Math.round(stats.minutes / 60))} ساعت آموزش در ${faNum(stats.courses)} دوره. آمار از محتوای منتشرشده و ثبت‌نام‌های واقعی محاسبه می‌شود.`
+            : `${Math.round(stats.minutes / 60)} hours of teaching across ${stats.courses} courses. Numbers come from published content and real registrations.`}
+        </p>
       </div>
 
-      {/* ── Courses / Tutorials grid ───────────────────────────── */}
+      {/* ── Courses grid ───────────────────────────────────────── */}
       {(activeTab === "all" || activeTab === "course") && gridItems.length > 0 && (
         <section className="container-x pb-14">
           <div className="mb-6 flex items-center justify-between">
-            <h2 className="font-display text-h3 text-foreground">
-              {isFA ? "دوره‌های آموزشی" : "Courses"}
-            </h2>
+            <h2 className="font-display text-h3 text-foreground">{isFA ? "دوره‌های آموزشی" : "Courses"}</h2>
             <span className="text-caption text-muted tabular">
               {n(gridItems.length)} {isFA ? "مورد" : "items"}
             </span>
@@ -679,7 +670,7 @@ export function AcademyClient({ items, categories }: Props) {
           <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {gridItems.map((item, i) => (
               <Reveal key={item.id} delay={i * 60}>
-                <CourseCard item={item} onEnroll={setEnrollItem} />
+                <CourseCard item={item} onEnroll={setEnrollItem} stat={itemStats[item.slug]} />
               </Reveal>
             ))}
           </div>
@@ -700,7 +691,7 @@ export function AcademyClient({ items, categories }: Props) {
             </div>
             <div className="flex flex-col gap-4">
               {eventItems.map((item) => (
-                <EventRow key={item.id} item={item} onEnroll={setEnrollItem} />
+                <EventRow key={item.id} item={item} onEnroll={setEnrollItem} stat={itemStats[item.slug]} />
               ))}
             </div>
           </div>
@@ -725,16 +716,16 @@ export function AcademyClient({ items, categories }: Props) {
         </div>
       )}
 
-      {/* ── Featured Instructors ──────────────────────────────── */}
+      {/* ── Instructors ───────────────────────────────────────── */}
       {activeTab === "all" && uniqueInstructorItems.length > 0 && (
         <section className="container-x py-14">
           <div className="mb-6">
-            <p className="text-label text-accent mb-2">{isFA ? "مدرسین" : "Instructors"}</p>
+            <p className="mb-2 text-label text-accent">{isFA ? "مدرسین" : "Instructors"}</p>
             <h2 className="font-display text-h3 text-foreground">{isFA ? "آموزش از بهترین‌ها" : "Learn from the best"}</h2>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {uniqueInstructorItems.slice(0, 6).map((item) => (
-              <InstructorCard key={item.authorId} item={item} />
+              <InstructorCard key={item.authorId} item={item} stat={statFor(item.authorId)} />
             ))}
           </div>
         </section>
@@ -744,29 +735,37 @@ export function AcademyClient({ items, categories }: Props) {
       {activeTab === "all" && (
         <section className="bg-[#0f141c]">
           <div className="container-x py-16 text-center text-white">
-            <p className="text-label text-white/60 mb-3">{isFA ? "همین حالا شروع کن" : "Start today"}</p>
-            <h2 className="font-display text-h1 text-white text-balance mb-4">
+            <p className="mb-3 text-label text-white/60">{isFA ? "همین حالا شروع کن" : "Start today"}</p>
+            <h2 className="mb-4 font-display text-h1 text-white text-balance">
               {isFA ? "به آکادمی رزی بپیوند." : "Join Rosie Academy."}
             </h2>
-            <p className="text-body-lg text-white/70 max-w-lg mx-auto mb-8">
+            <p className="mx-auto mb-8 max-w-lg text-body-lg text-white/70">
               {isFA
                 ? "از مبانی طراحی الگو تا انتشار حرفه‌ای — با مدرسان تجربی یاد بگیر."
                 : "From pattern design fundamentals to professional publishing — learn with experienced instructors."}
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Button variant="accent" size="lg" href={href(locale, "/signup")}>
-                {isFA ? "ثبت‌نام رایگان" : "Sign up free"}
+              <Button variant="accent" size="lg" href={href(locale, featuredHref(items))}>
+                {isFA ? "شروع با دوره منتخب" : "Start with the featured course"}
               </Button>
-              <Button variant="glass" size="lg" href={href(locale, "/about")}>
-                {isFA ? "درباره آکادمی" : "About Academy"}
+              <Button variant="glass" size="lg" href={href(locale, "/contact")}>
+                {isFA ? "پرسش از آکادمی" : "Ask the academy"}
               </Button>
             </div>
           </div>
         </section>
       )}
 
-      {/* ── Enroll Modal ──────────────────────────────────────── */}
-      {enrollItem && <EnrollModal item={enrollItem} onClose={() => setEnrollItem(null)} />}
+      {/* ── Register modal ────────────────────────────────────── */}
+      {enrollItem && (
+        <EnrollModal item={enrollItem} stat={itemStats[enrollItem.slug]} onClose={() => setEnrollItem(null)} />
+      )}
     </>
   );
+}
+
+/** Featured course link for the closing CTA (falls back to the catalogue). */
+function featuredHref(items: EducationCardData[]): string {
+  const featured = items.find((item) => item.featured && item.type === "course") ?? items[0];
+  return featured ? `/academy/${featured.slug}` : "/academy";
 }

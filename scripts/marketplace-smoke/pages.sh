@@ -16,6 +16,15 @@ check() { printf "%-58s" "$2"; code=$(curl -s -o /tmp/page.html -w "%{http_code}
 
 echo "── public pages"
 check "/fa" "home fa"
+
+echo
+echo "── academy pages (hero video, course pages, admin-driven content)"
+check "/fa/academy" "academy fa"
+check "/en/academy" "academy en"
+check "/fa/academy/pattern-design-foundations" "course detail fa"
+check "/en/academy/pattern-design-foundations" "course detail en"
+check "/fa/academy/geometry-and-rhythm" "course without price fa"
+check "/videos/academy/preview.mp4" "hero preview video (mp4)"
 check "/fa/marketplace" "marketplace catalogue fa"
 check "/en/marketplace" "marketplace catalogue en"
 check "/fa/marketplace/$SLUG" "asset detail fa ($SLUG)"

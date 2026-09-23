@@ -83,6 +83,26 @@ export function StoreDropdown({ nav, onNavigate, compact }: { nav: NavData; onNa
             );
           })}
         </ul>
+
+        {/* Quick entries that used to sit in the top row — one click from the shop button. */}
+        <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-border pt-5">
+          {[
+            { label: dict.nav.patterns, url: "/patterns" },
+            { label: dict.nav.styles, url: "/styles" },
+            { label: dict.nav.collections, url: "/collections" },
+            { label: locale === "fa" ? "فایل دیجیتال و لایسنس" : "Digital files & licensing", url: "/marketplace" },
+            { label: locale === "fa" ? "اشتراک دانلود" : "Download passes", url: "/marketplace/subscriptions" },
+          ].map((entry) => (
+            <Link
+              key={entry.url}
+              href={href(locale, entry.url)}
+              onClick={onNavigate}
+              className="rounded-full border border-border bg-surface px-3.5 py-1.5 text-caption text-foreground-secondary transition-colors hover:border-accent hover:text-accent"
+            >
+              {entry.label}
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );

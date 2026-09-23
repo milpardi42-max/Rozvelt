@@ -8,11 +8,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth, useCart, useLocale, useTheme } from "@/components/providers/AppProviders";
 import { cn, href, t } from "@/lib/utils";
 import { Logo } from "./Logo";
-import { MegaMenu } from "./MegaMenu";
 import { StoreDropdown } from "./StoreDropdown";
 import type { NavData } from "./nav-data";
 
-type Panel = "explore" | "store" | null;
+type Panel = "store" | null;
 
 export function Header({ nav }: { nav: NavData }) {
   const { locale, dict } = useLocale();
@@ -61,18 +60,16 @@ export function Header({ nav }: { nav: NavData }) {
   const otherLocale = locale === "fa" ? "en" : "fa";
   const switchHref = pathname.replace(new RegExp(`^/${locale}`), `/${otherLocale}`) || `/${otherLocale}`;
 
+  /*
+   * Primary navigation — the four sections, in the order set by the shop:
+   * آکادمی · هنرمندان · پورتفولیو · فروشگاه
+   * الگوها و فایل دیجیتال از داخل پنل فروشگاه و فوتر در دسترس می‌مانند.
+   */
   const links: { key: string; label: string; href: string; panel?: Panel }[] = [
-    { key: "patterns", label: dict.nav.patterns, href: href(locale, "/patterns"), panel: "explore" },
-    { key: "shop", label: dict.nav.products, href: href(locale, "/shop"), panel: "store" },
-    {
-      /* Digital licensing storefront — additive entry, the physical shop above is unchanged. */
-      key: "digital",
-      label: locale === "fa" ? "فایل دیجیتال" : "Digital files",
-      href: href(locale, "/marketplace"),
-    },
+    { key: "academy", label: dict.nav.education, href: href(locale, "/academy") },
     { key: "artists", label: dict.nav.artists, href: href(locale, "/artists") },
     { key: "portfolio", label: dict.nav.portfolio, href: href(locale, "/portfolio") },
-    { key: "academy", label: dict.nav.education, href: href(locale, "/academy") },
+    { key: "shop", label: dict.nav.products, href: href(locale, "/shop"), panel: "store" },
   ];
 
   return (
@@ -173,7 +170,6 @@ export function Header({ nav }: { nav: NavData }) {
 
         {/* Panels */}
         <div onMouseEnter={() => panel && openPanel(panel)} className={cn("hidden lg:block absolute inset-x-0 top-full origin-top transition-[opacity,transform] duration-200 ease-[var(--ease-out)]", panel ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none -translate-y-1 opacity-0")} aria-hidden={!panel}>
-          {panel === "explore" && <MegaMenu nav={nav} onNavigate={() => setPanel(null)} />}
           {panel === "store" && <StoreDropdown nav={nav} onNavigate={() => setPanel(null)} />}
         </div>
       </header>
@@ -219,6 +215,8 @@ function MobileMenu({ open, onClose, nav, links, switchHref, otherLocale }: { op
             ))}
           </div>
           <div className="mt-6 flex flex-col gap-2 text-sm">
+            <Link onClick={onClose} href={href(locale, "/patterns")} className="py-2 text-foreground-secondary">{dict.nav.patterns}</Link>
+            <Link onClick={onClose} href={href(locale, "/marketplace")} className="py-2 text-foreground-secondary">{locale === "fa" ? "فایل دیجیتال" : "Digital files"}</Link>
             <Link onClick={onClose} href={href(locale, "/collections")} className="py-2 text-foreground-secondary">{dict.nav.collections}</Link>
             <Link onClick={onClose} href={href(locale, "/projects")} className="py-2 text-foreground-secondary">{dict.nav.projects}</Link>
             <Link onClick={onClose} href={href(locale, "/custom")} className="py-2 text-foreground-secondary">{dict.nav.custom}</Link>

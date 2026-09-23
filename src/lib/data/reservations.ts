@@ -61,7 +61,7 @@ export async function getUserReservations(userId: string, email: string) {
 
 export async function createReservation(input: {
   eventSlug: string;
-  eventType: "workshop" | "webinar";
+  eventType: "course" | "workshop" | "webinar";
   eventTitle: Localized;
   startsAt: string;
   capacity: number;
@@ -82,6 +82,7 @@ export async function createReservation(input: {
   const activeCount = reservations.filter(
     (reservation) => reservation.eventSlug === input.eventSlug && reservation.status !== "cancelled",
   ).length;
+  // Courses are self-paced: unlimited seats, no schedule.
   if (input.capacity > 0 && activeCount >= input.capacity) {
     throw new Error("event_full");
   }

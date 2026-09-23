@@ -204,7 +204,8 @@ export type ReservationStatus = "reserved" | "cancelled" | "attended";
 export interface AcademyReservation {
   id: ID;
   eventSlug: string;
-  eventType: "workshop" | "webinar";
+  /** "course" entries are self-paced enrollments; workshop/webinar entries are live-event seats. */
+  eventType: "course" | "workshop" | "webinar";
   eventTitle: Localized;
   startsAt: string;
   userId?: ID;

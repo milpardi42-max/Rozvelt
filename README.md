@@ -89,6 +89,14 @@ including the audit, every new route, the env flags and a step-by-step test reci
 Without `ZARINPAL_MERCHANT_ID` the built-in sandbox gateway takes over, so a full test purchase works
 end-to-end today.
 
+## Academy
+
+The academy homepage (hero preview video, real computed statistics, real enrolment form) and the
+navigation change (آکادمی · هنرمندان · پورتفولیو · فروشگاه) are documented in
+**[`ACADEMY.md`](./ACADEMY.md)** — including how the preview video is generated
+(`scripts/academy/make-preview-video.py`), how an admin can replace it by uploading a video for a
+course, and the enrolment smoke check (`scripts/academy/enroll-e2e.sh`).
+
 ## Admin
 
 Sign in at `/{locale}/login` with the admin account → `/{locale}/admin`.

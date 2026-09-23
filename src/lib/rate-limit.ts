@@ -28,6 +28,8 @@ const POLICIES: Record<string, { window: number; max: number }> = {
   "marketplace-checkout": { window: 15 * 60 * 1000, max: 30 },
   /** Coupon probing: 60 checks per 15 min */
   "marketplace-coupon": { window: 15 * 60 * 1000, max: 60 },
+  /** Academy registrations: 12 per 15 min per IP */
+  "academy-enroll": { window: 15 * 60 * 1000, max: 12 },
   /** Artist applications: 6 per hour */
   "marketplace-apply": { window: 60 * 60 * 1000, max: 6 },
   /** Default (fallback) */
