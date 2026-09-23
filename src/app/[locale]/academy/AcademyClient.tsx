@@ -64,6 +64,8 @@ export interface AcademyInstructorStat {
 interface Props {
   items: EducationCardData[];
   categories: Category[];
+  /** Category id coming from `?category=<slug>` (the strip on the academy page). */
+  initialCategory?: string;
   stats: AcademyStats;
   itemStats: Record<string, AcademyItemStat>;
   instructorStats: AcademyInstructorStat[];
@@ -499,11 +501,11 @@ function InstructorCard({ item, stat }: { item: EducationCardData; stat?: Academ
 }
 
 /* ─── Main Client Component ──────────────────────────────────── */
-export function AcademyClient({ items, categories, stats, itemStats, instructorStats }: Props) {
+export function AcademyClient({ items, categories, initialCategory, stats, itemStats, instructorStats }: Props) {
   const { locale, dict } = useLocale();
   const isFA = locale === "fa";
   const [activeTab, setActiveTab] = useState<Tab>("all");
-  const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [activeCategory, setActiveCategory] = useState<string>(initialCategory && initialCategory !== "all" ? initialCategory : "all");
   const [sortKey, setSortKey] = useState<SortKey>("popular");
   const [enrollItem, setEnrollItem] = useState<EducationCardData | null>(null);
   const [showFilters, setShowFilters] = useState(false);

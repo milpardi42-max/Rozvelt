@@ -44,10 +44,12 @@ export async function generateMetadata({
 
 export default async function AcademyPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: Locale }>;
+  searchParams: Promise<{ category?: string }>;
 }) {
-  const { locale } = await params;
+  const [{ locale }, query] = await Promise.all([params, searchParams]);
   const site = await getSite();
   const d = dictionaries[locale];
   const isFA = locale === "fa";
@@ -83,6 +85,10 @@ export default async function AcademyPage({
     null;
   const n = (v: number) => (isFA ? faNum(v) : String(v));
   const cats = site.categories.filter((c) => site.education.some((e) => e.categoryId === c.id));
+  /* The category strip links to `/academy?category=<slug>` — resolve it so the grid opens filtered. */
+  const initialCategory = query.category
+    ? cats.find((c) => c.slug === query.category)?.id ?? "all"
+    : "all";
   const eventCount = stats.workshops + stats.webinars;
 
   const featuredLessons = (featured?.lessonList ?? []).slice(0, 8);
@@ -533,6 +539,7 @@ export default async function AcademyPage({
       <AcademyClient
         items={all}
         categories={cats}
+        initialCategory={initialCategory}
         stats={{ courses: stats.courses, lessons: stats.lessons, minutes: stats.minutes, instructors: stats.instructors, enrollments: stats.enrollments, students: stats.students }}
         itemStats={stats.bySlug}
         instructorStats={stats.instructorStats}
