@@ -151,6 +151,11 @@ export function AccountView() {
   const quickLinks = [
     { href: href(locale, "/favorites"), icon: <Heart className="h-4 w-4" />, label: fa ? "علاقه‌مندی‌ها" : "Favorites" },
     { href: href(locale, "/checkout"), icon: <ShoppingBag className="h-4 w-4" />, label: fa ? "سبد خرید" : "Cart" },
+    {
+      href: href(locale, "/account/licenses"),
+      icon: <ShieldCheck className="h-4 w-4" />,
+      label: fa ? "لایسنس‌های دیجیتال" : "Digital licenses",
+    },
     ...(user.role === "artist" || user.role === "admin" ? [{ href: href(locale, "/artist"), icon: <Palette className="h-4 w-4" />, label: fa ? "داشبورد هنرمند" : "Artist Dashboard" }] : []),
     ...(user.role === "admin" ? [{ href: href(locale, "/admin"), icon: <ShieldCheck className="h-4 w-4" />, label: fa ? "پنل مدیریت" : "Admin Panel" }] : []),
   ];

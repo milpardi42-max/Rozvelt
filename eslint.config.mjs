@@ -18,6 +18,10 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      /* build output (this project sets `distDir: "dist/.next"`) */
+      "dist/**",
+      /* marketplace runtime data: private masters, staged chunks, derivatives */
+      "data/**",
     ],
   },
 ];

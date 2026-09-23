@@ -81,6 +81,14 @@ public/
   `img-zoom`, `arrow-shift`, `.spotlight` — all respect `prefers-reduced-motion`.
 - **RTL/LTR**: logical properties only (`ms/me/ps/pe/start/end/inset-inline`), `rtl-flip` for icons.
 
+## Digital marketplace
+
+The digital licensing storefront (private master upload → admin review → payment → signed download →
+PDF certificate → royalties → subscriptions) is documented in **[`MARKETPLACE.md`](./MARKETPLACE.md)** —
+including the audit, every new route, the env flags and a step-by-step test recipe.
+Without `ZARINPAL_MERCHANT_ID` the built-in sandbox gateway takes over, so a full test purchase works
+end-to-end today.
+
 ## Admin
 
 Sign in at `/{locale}/login` with the admin account → `/{locale}/admin`.

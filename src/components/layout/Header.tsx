@@ -64,6 +64,12 @@ export function Header({ nav }: { nav: NavData }) {
   const links: { key: string; label: string; href: string; panel?: Panel }[] = [
     { key: "patterns", label: dict.nav.patterns, href: href(locale, "/patterns"), panel: "explore" },
     { key: "shop", label: dict.nav.products, href: href(locale, "/shop"), panel: "store" },
+    {
+      /* Digital licensing storefront — additive entry, the physical shop above is unchanged. */
+      key: "digital",
+      label: locale === "fa" ? "فایل دیجیتال" : "Digital files",
+      href: href(locale, "/marketplace"),
+    },
     { key: "artists", label: dict.nav.artists, href: href(locale, "/artists") },
     { key: "portfolio", label: dict.nav.portfolio, href: href(locale, "/portfolio") },
     { key: "academy", label: dict.nav.education, href: href(locale, "/academy") },

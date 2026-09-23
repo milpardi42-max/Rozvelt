@@ -22,6 +22,14 @@ const POLICIES: Record<string, { window: number; max: number }> = {
   profile: { window: 5 * 60 * 1000, max: 30 },
   /** Upload: 20 per 5 min */
   upload: { window: 5 * 60 * 1000, max: 20 },
+  /** Marketplace uploads: chunks are numerous by design (400 parts / 10 min) */
+  "marketplace-upload": { window: 10 * 60 * 1000, max: 400 },
+  /** Marketplace checkout: 30 order attempts per 15 min */
+  "marketplace-checkout": { window: 15 * 60 * 1000, max: 30 },
+  /** Coupon probing: 60 checks per 15 min */
+  "marketplace-coupon": { window: 15 * 60 * 1000, max: 60 },
+  /** Artist applications: 6 per hour */
+  "marketplace-apply": { window: 60 * 60 * 1000, max: 6 },
   /** Default (fallback) */
   default: { window: 15 * 60 * 1000, max: 8 },
 };
