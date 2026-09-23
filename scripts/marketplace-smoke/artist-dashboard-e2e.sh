@@ -68,6 +68,11 @@ def status(path, cookie=None):
     return subprocess.run(["curl", "-s", *args, f"{BASE}{path}"], capture_output=True).stdout.decode()
 
 
+def curl_html(args):
+    """curl() helper that keeps the raw body (used for chunk discovery)."""
+    return curl(args)
+
+
 def text(html):
     plain = re.sub(r"<script.*?</script>", " ", html, flags=re.S)
     return html_lib.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", plain)))
@@ -291,7 +296,33 @@ check("and links back to the dashboard", "/fa/artist" in portfolio)
 check("it is not a second dashboard", "راه‌اندازی استودیو" not in plain)
 
 # ─────────────────────────────────────────────────────────────────────────────
-heading("8. cleanup")
+heading("8. signing out")
+
+# Every signed-in surface must offer a sign-out control. The artist pages are
+# server-rendered, so the control is in the HTML; /account and the header are
+# client components, so theirs arrives in the page's own JS chunk.
+for path in ("/fa/artist", "/fa/artist/marketplace", "/fa/artist/portfolio", "/en/artist"):
+    html = curl(["-b", ARTIST_JAR, f"{BASE}{path}"])
+    check(f"{path} serves a sign-out control", 'data-testid="sign-out"' in html or "خروج از حساب" in html or "Sign out" in html)
+
+for path in ("/fa/account", "/fa/account/licenses"):
+    html = curl(["-b", ARTIST_JAR, f"{BASE}{path}"])
+    chunks = re.findall(r'<script src="([^"]+\.js)"', html)
+    bundle = "".join(curl([f"{BASE}{src}"]) for src in chunks)
+    label = "خروج از حساب" in html or "خروج از حساب" in bundle or "Sign out" in bundle
+    check(f"{path} offers sign-out (page or its bundle)", label, f"{len(chunks)} chunks")
+
+# …and it must really end the session.
+signout_jar = "/tmp/artist-dashboard-signout.txt"
+login(signout_jar, SELLER_EMAIL, "seller-dev-pass")
+check("the session works before signing out", api("GET", "/api/auth/me", cookie=signout_jar).get("user") is not None)
+out = api("POST", "/api/auth/logout", {}, cookie=signout_jar)
+check("the sign-out endpoint answers ok", out.get("ok") is True, json.dumps(out)[:60])
+check("the session is gone afterwards", api("GET", "/api/auth/me", cookie=signout_jar).get("user") is None)
+check("a private page bounces a signed-out visitor to login", status("/fa/artist", signout_jar) == "307")
+
+# ─────────────────────────────────────────────────────────────────────────────
+heading("9. cleanup")
 
 users = [user for user in load("users.json", []) if user.get("email") not in (SELLER_EMAIL, BUYER_EMAIL)]
 save("users.json", users)

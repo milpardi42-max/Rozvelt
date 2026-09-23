@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LayoutDashboard } from "lucide-react";
 import { ArtistDashboard } from "@/components/artist/ArtistDashboard";
+import { SignOutButton } from "@/components/profile/SignOutButton";
 import { getSession } from "@/lib/auth";
 import type { Locale } from "@/lib/i18n/types";
 import { href } from "@/lib/utils";
@@ -54,6 +55,7 @@ export default async function ArtistPortfolioPage({ params }: { params: Promise<
             >
               {fa ? "میز کار فروش" : "Sales studio"}
             </Link>
+            <SignOutButton size="sm" />
           </div>
         </div>
       </div>

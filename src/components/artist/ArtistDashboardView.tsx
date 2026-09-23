@@ -18,11 +18,13 @@ import {
   Sparkles,
   Store,
   TrendingUp,
+  User,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { AssetStatusBadge, MiniBars, Money, bytesLabel } from "@/components/artist/DashboardParts";
+import { SignOutButton } from "@/components/profile/SignOutButton";
 import { formatLabel } from "@/lib/marketplace/formats";
 import { familyName } from "@/lib/data/families";
 import type { ArtistDashboardData, DashboardWork } from "@/lib/artist/dashboard";
@@ -135,6 +137,14 @@ export function ArtistDashboardView({ locale, data }: { locale: Locale; data: Ar
                 {fa ? "پروفایل عمومی" : "Public profile"}
               </Link>
             )}
+            <Link
+              href={href(locale, "/account")}
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-border px-5 text-sm transition hover:border-foreground"
+            >
+              <User className="h-4 w-4" />
+              {fa ? "حساب من" : "My account"}
+            </Link>
+            <SignOutButton size="lg" />
           </div>
         </div>
 

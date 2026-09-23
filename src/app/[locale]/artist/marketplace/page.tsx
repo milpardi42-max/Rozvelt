@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ArtistStudio } from "@/components/marketplace/ArtistStudio";
+import { SignOutButton } from "@/components/profile/SignOutButton";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { getSession } from "@/lib/auth";
 import type { Locale } from "@/lib/i18n/types";
@@ -58,12 +59,17 @@ export default async function ArtistStudioPage({ params }: { params: Promise<{ l
         locale={locale}
         className="mb-6"
       />
-      <h1 className="font-display text-h1">{fa ? "میز کار فروش آثار دیجیتال" : "Digital sales studio"}</h1>
-      <p className="mt-2 max-w-2xl text-foreground-secondary">
-        {fa
-          ? "فایل مادر را ارسال کنید، قیمت لایسنس‌ها را تعیین کنید و فروش، سهم خود و تسویه را پیگیری کنید."
-          : "Submit master files, price your licenses, and follow sales, royalties and payouts."}
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-h1">{fa ? "میز کار فروش آثار دیجیتال" : "Digital sales studio"}</h1>
+          <p className="mt-2 max-w-2xl text-foreground-secondary">
+            {fa
+              ? "فایل مادر را ارسال کنید، قیمت لایسنس‌ها را تعیین کنید و فروش، سهم خود و تسویه را پیگیری کنید."
+              : "Submit master files, price your licenses, and follow sales, royalties and payouts."}
+          </p>
+        </div>
+        <SignOutButton />
+      </div>
       <div className="mt-10">
         <ArtistStudio locale={locale} />
       </div>

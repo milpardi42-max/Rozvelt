@@ -160,6 +160,23 @@ The artist area:
 - Signed-out visitors are redirected to login; a signed-in **buyer** is shown an honest upsell to the
   designer registration instead of a form they cannot use (the artist APIs still enforce the role).
 
+## Signing out
+
+`SignOutButton` (`src/components/profile/SignOutButton.tsx`) is the single sign-out control, in four
+variants (`solid` / `outline` / `ghost` / `menu` + an icon-only form). It is offered everywhere a
+signed-in visitor can be:
+
+| Where | How it appears |
+|---|---|
+| Header | avatar opens an account menu (account, licenses, artist dashboard, sales studio) ending with «خروج از حساب» |
+| Header (mobile) | the menu shows the signed-in account card with a sign-out button |
+| `/account` | profile header button, a row at the end of the sidebar menu, and a dedicated row in **Settings** |
+| `/account/licenses` | same header shell |
+| `/artist`, `/artist/marketplace`, `/artist/portfolio` | button next to the page actions |
+
+Clicking it clears the session cookie, **replaces** the history entry (so Back cannot return to a
+private page) and refreshes the router, so every server component re-renders as a guest.
+
 Data for the dashboard comes from `src/lib/artist/dashboard.ts` (artist record + works with delivery
 detail + analytics with a previous-period comparison + wallet), so the page itself is a pure view.
 
