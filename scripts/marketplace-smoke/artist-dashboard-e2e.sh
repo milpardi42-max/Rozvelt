@@ -309,8 +309,17 @@ for path in ("/fa/account", "/fa/account/licenses"):
     html = curl(["-b", ARTIST_JAR, f"{BASE}{path}"])
     chunks = re.findall(r'<script src="([^"]+\.js)"', html)
     bundle = "".join(curl([f"{BASE}{src}"]) for src in chunks)
+    # these pages are client components: the control ships in their own chunk,
+    # where React's `data-testid="sign-out"` is minified to `data-testid":"sign-out"`
+    has_control = 'data-testid="sign-out"' in html or 'data-testid":"sign-out"' in bundle
     label = "خروج از حساب" in html or "خروج از حساب" in bundle or "Sign out" in bundle
-    check(f"{path} offers sign-out (page or its bundle)", label, f"{len(chunks)} chunks")
+    check(f"{path} ships the sign-out control", has_control and label, f"{len(chunks)} chunks")
+
+# the header (client component, on every page) must carry the account menu + sign out
+home_html = curl(["-b", ARTIST_JAR, f"{BASE}/fa"])
+home_bundle = "".join(curl([f"{BASE}{src}"]) for src in re.findall(r'<script src="([^"]+\.js)"', home_html))
+check("the header ships the account menu with sign-out",
+      ('data-testid":"sign-out"' in home_bundle or 'data-testid="sign-out"' in home_bundle) and "حساب من" in home_bundle)
 
 # …and it must really end the session.
 signout_jar = "/tmp/artist-dashboard-signout.txt"
