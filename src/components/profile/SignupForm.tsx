@@ -292,8 +292,14 @@ export function SignupForm({
       <Field label={fa ? "نام و نام خانوادگی" : "Full name"} className={spanFull}>
         <Input name="name" required autoComplete="name" />
       </Field>
-      <Field label={fa ? "ایمیل" : "Email"} className={seller ? undefined : spanFull}>
+      <Field label={fa ? "ایمیل" : "Email"} className={spanFull}>
         <Input name="email" type="email" required dir="ltr" autoComplete="email" />
+      </Field>
+      <Field label={fa ? "رمز عبور (حداقل ۶ کاراکتر)" : "Password (min 6 chars)"}>
+        <Input name="password" type="password" required dir="ltr" minLength={6} autoComplete="new-password" />
+      </Field>
+      <Field label={fa ? "تکرار رمز عبور" : "Confirm password"}>
+        <Input name="confirm" type="password" required dir="ltr" minLength={6} autoComplete="new-password" />
       </Field>
 
       {/* seller half — opened by choosing «هنرمند / طراح», nothing in here is required */}
@@ -315,7 +321,7 @@ export function SignupForm({
         <Field label={fa ? "شهر" : "City"}>
           <Input name="city" autoComplete="address-level2" />
         </Field>
-        <Field label={fa ? "آیدی اینستاگرام (اختیاری)" : "Instagram handle (optional)"} className={wide ? "sm:col-span-2" : undefined}>
+        <Field label={fa ? "آیدی اینستاگرام (اختیاری)" : "Instagram handle (optional)"}>
           <Input name="instagram" dir="ltr" placeholder="@username" />
         </Field>
         <Field label={fa ? "لینک پورتفولیو (اختیاری)" : "Portfolio link (optional)"} className={wide ? "sm:col-span-2" : undefined}>
@@ -425,13 +431,6 @@ export function SignupForm({
           </fieldset>
         </div>
       </div>
-
-      <Field label={fa ? "رمز عبور (حداقل ۶ کاراکتر)" : "Password (min 6 chars)"}>
-        <Input name="password" type="password" required dir="ltr" minLength={6} autoComplete="new-password" />
-      </Field>
-      <Field label={fa ? "تکرار رمز عبور" : "Confirm password"}>
-        <Input name="confirm" type="password" required dir="ltr" minLength={6} autoComplete="new-password" />
-      </Field>
 
       {/* a visitor who already sells gets the dashboard instead of a second registration */}
       {sellerLocked && (
