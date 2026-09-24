@@ -4,9 +4,8 @@ import { DEFAULT_LOCALE, LOCALES, type Locale } from "@/lib/i18n/types";
 
 /** Static route segments of the storefront (locale-prefixed). Admin/checkout/account are excluded. */
 const STATIC_PAGES = [
-  "", "about", "academy", "artists", "collections", "contact", "custom",
-  "faq", "patterns", "portfolio", "projects", "returns", "shop", "signup", "signup/artist", "signup/buyer",
-  "spaces", "stories", "styles",
+  "", "about", "academy", "artists", "collections", "contact", "creators/join", "custom",
+  "faq", "patterns", "portfolio", "projects", "returns", "shop", "spaces", "stories", "styles",
 ] as const;
 
 /** collection (key of SiteContent) → route segment its detail pages live under */

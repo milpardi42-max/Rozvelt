@@ -48,7 +48,7 @@ export default async function ArtistDashboardPage({ params }: { params: Promise<
           </p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
             <Link
-              href={href(locale, "/signup/artist")}
+              href={href(locale, "/creators/join")}
               className="inline-flex h-11 items-center gap-2 rounded-full bg-foreground px-6 text-sm text-background transition hover:bg-primary"
             >
               <Sparkles className="h-4 w-4" />

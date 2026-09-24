@@ -73,7 +73,7 @@ src/
     page.tsx               # homepage — sections driven by admin config
     patterns/ shop/ artists/ portfolio/ academy/ styles/ spaces/ collections/
     stories/ projects/ custom/ about/ contact/ faq/ returns/ legal/[doc]/
-    login/ signup/ (chooser · buyer/ · artist/) account/ favorites/ checkout/ search/ admin/
+    login/ signup/ account/ favorites/ checkout/ search/ creators/join/ admin/
     artist/                # dashboard (new) · marketplace (sales studio) · portfolio (manager)
   app/api/                 # newsletter, contact, admin content, auth, search-index, health
   app/sitemap.ts robots.ts # generated SEO files (use NEXT_PUBLIC_SITE_URL)
@@ -135,26 +135,23 @@ Products belong to one of eight families, defined once in `src/lib/data/families
   shop (`/{locale}/shop?family=<slug>`), and `/artist` shows the family next to each asset.
 - **Admin** — `ProductsManager` gives every product a «دسته محصول» selector (including «بدون دسته»).
 
-## Artists: signup split & dashboard
+## Artists: registration & dashboard
 
-Registration is a chooser plus one page per account type — the account type is picked in the form, and
-each kind gets its own page:
+Registration is the two doors the site always had, each with its own form:
 
-- `/{locale}/signup` — **the chooser**: the buyer / artist-designer choice as a real radio form, each
-  card quoting what that account gets and carrying a direct link to its page.
-- `/{locale}/signup/buyer` — **buyers**: the short form they always had (name, e-mail, password,
-  confirmation) in the same shell, with the account-type switch above it.
-- `/{locale}/signup/artist` — **designers / sellers**: the same single-page form it always
-  had: name, e-mail, phone, field of practice, city, Instagram, portfolio and the password pair. Below
-  it sits an **optional** studio block: studio name, years of practice, a short bio, the **delivery
-  formats** they will upload (PNG/JPG/AI/PSD/SVG/EPS) and the **product families** they work in, plus
-  the seller terms. Nothing in that block is required — an empty answer is not stored and can be
-  completed later from the artist dashboard. `POST /api/auth/signup` sanitises and stores whatever was
-  given on the `Artist` record (`signupStudio`, `signupExperience`, `signupFormats`, `signupFamilies`,
-  `signupTermsAt`, `bio`), creates the account, signs it in and sends the file to admin review.
-- The account-type switch (`AccountTypeSwitch`) sits on both type pages, so a visitor who lands on
-  either one can hop to the other in a click; `/{locale}/creators/join` (nav, footer, upsells, search
-  results) still works — it is a 307 redirect to `/{locale}/signup/artist`.
+- `/{locale}/signup` — **the registration form**: it carries the account-type choice itself
+  («خریدار» / «هنرمند / طراح», radios named `account_role`) next to the four account fields (name,
+  e-mail, password, confirmation) — pick the artist half and the account is created as an artist. The
+  shell then hands the new account over to the login transition.
+- `/{locale}/creators/join` — **designers / sellers**: the signup page with the perks, the designers
+  already on board and its own single-page seller form (name, e-mail, phone, field of practice, city,
+  Instagram, portfolio and the password pair). Only the four account fields are required; the rest is
+  optional and can be completed later from the artist dashboard. `POST /api/auth/signup` creates the
+  account, stores what was given on the `Artist` record (`signupPhone`, `signupCity`,
+  `signupSpecialty`, `signupPortfolioUrl`, the Instagram handle and the portfolio link), signs the
+  designer in and sends the file to admin review as `pending`. Together the two doors cover both
+  kinds of account: the quick one for buyers (and for designers who want to fill the file in later) and
+  the full seller application for designers.
 
 The artist area:
 

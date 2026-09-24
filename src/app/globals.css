@@ -1128,9 +1128,7 @@ html[dir="rtl"] {
   margin-top: 12px !important;
 }
 
-/* …but radios and checkboxes keep their own size (the account-type choice on
-   /signup is a radio pair, and its input is visually hidden on purpose) */
-.auth-card__form input:not([type="radio"]):not([type="checkbox"]) {
+.auth-card__form input {
   height: 42px !important;
 }
 

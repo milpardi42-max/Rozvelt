@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 #
-# Registration split + artist dashboard — runs against a live server.
+# Registration doors + artist dashboard — runs against a live server.
 #
 # Proves, with a real registration and real pages, that:
-#   1. registration is a chooser (/signup) plus one page per account type: the
-#      buyer page (/signup/buyer) keeps the short four-field form, the artist
-#      page (/signup/artist) carries the whole sell-side content (formats,
-#      families, money, FAQ) and serves the seller form as one single page — the
-#      form it always had, with the studio file offered as an optional block and
-#      no step wizard; the old /creators/join redirects to the artist page
-#   3. POST /api/auth/signup really stores that optional seller file (studio,
-#      experience, declared formats + families, bio, terms) on the Artist record
+#   1. /signup is the buyer door: the form carries the account-type choice itself
+#      («خریدار» / «هنرمند / طراح», radios named account_role), collects the four
+#      account fields and none of the seller ones
+#   2. /creators/join is the designer door: a real page with its own single-page
+#      seller form (name, e-mail, phone, field of practice, city, Instagram,
+#      portfolio and the password pair), only the four account fields required
+#      and no step wizard
+#   3. POST /api/auth/signup really stores what the designer gave (phone, city,
+#      field of practice, Instagram handle, portfolio link) on the Artist record
 #      when it is filled in, and invents nothing when it is not
 #   4. the admin sees that file and can approve the artist
 #   5. /artist is the artist dashboard (signed-out redirect, buyer upsell,
@@ -107,20 +108,14 @@ def auth_form(page):
     return page[start : end + len("</form>")] if end > start else page[start:]
 
 
-def css_of(page):
-    """Every stylesheet the page loads, whitespace and quotes stripped."""
-    sheets = re.findall(r'<link rel="stylesheet" href="([^"]+)"', page)
-    return "".join(curl([f"{BASE}{sheet}"]) for sheet in sheets).replace(" ", "").replace('"', "")
-
-
-def redirect_of(path):
-    """(status, location) of a path that is expected to redirect."""
-    out = subprocess.run(
-        ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code} %{redirect_url}", f"{BASE}{path}"],
-        capture_output=True,
-    ).stdout.decode()
-    code, _, location = out.partition(" ")
-    return code, location
+def seller_form(page):
+    """The designer page's own form — found from its phone field."""
+    anchor = page.find('name="phone"')
+    if anchor < 0:
+        return ""
+    start = page.rfind("<form", 0, anchor)
+    end = page.find("</form>", anchor)
+    return page[start : end + len("</form>")] if start >= 0 and end > start else ""
 
 
 def load(name, fallback):
@@ -137,83 +132,51 @@ def save(name, payload):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-heading("1. /signup is the chooser — one account type, one page")
+heading("1. /signup is the buyer door")
 
 for locale in ("fa", "en"):
     page = curl([f"{BASE}/{locale}/signup"])
-    plain = text(page)
-    check(f"{locale} · both account types are offered as a real choice",
-          all(needle in page for needle in ('name="account_role"', 'type="radio"', 'value="buyer"', 'value="artist"')))
-    check(f"{locale} · each choice has its own page to open",
-          f"/{locale}/signup/buyer" in page and f"/{locale}/signup/artist" in page)
-    check(f"{locale} · no registration form on the chooser itself",
-          'name="confirm"' not in page and 'name="studioName"' not in page)
-    check(f"{locale} · names both kinds of account",
-          ("خریدار" in plain and "هنرمند" in plain) if locale == "fa" else ("Buyer" in plain and "Artist" in plain))
-
-    # the radios of that choice live inside the auth card, whose compact input
-    # rule must leave them their own size (they are visually hidden on purpose)
-    css = css_of(page)
-    check(f"{locale} · the compact card sizing leaves the account-type radios alone",
-          bool(re.search(r"input:not\(\[type=radio\]\)", css)))
-
-    buyer_page = curl([f"{BASE}/{locale}/signup/buyer"])
-    buyer_form = auth_form(buyer_page)
-    check(f"{locale} · buyer page keeps its four fields", all(
-        needle in buyer_form for needle in ('name="name"', 'name="email"', 'name="password"', 'name="confirm"')))
-    check(f"{locale} · the buyer form is the buyer's own — no seller fields in it", all(
-        needle not in buyer_form for needle in ('name="phone"', 'name="studioName"', 'name="type"', 'name="account_role"')))
-    check(f"{locale} · the switch on the buyer page links to the artist page",
-          f"/{locale}/signup/artist" in buyer_page and 'aria-current="page"' in buyer_page)
-    check(f"{locale} · the buyer page still points designers at their own page",
-          f"/{locale}/signup/artist" in buyer_page
-          and ("طراح یا فروشنده هستید؟" if locale == "fa" else "designer or seller").lower() in text(buyer_page).lower())
-
-# the designer door moved under /signup — the old path must keep working
-for locale in ("fa", "en"):
-    code, location = redirect_of(f"/{locale}/creators/join")
-    check(f"{locale} · the old designer path redirects to the artist page",
-          code in ("307", "308") and location.endswith(f"/{locale}/signup/artist"), f"{code} {location}")
+    form = auth_form(page)
+    check(f"{locale} · /signup serves the buyer registration form", all(
+        needle in form for needle in ('name="name"', 'name="email"', 'name="password"', 'name="confirm"')))
+    check(f"{locale} · the visitor picks the account type inside the form", all(
+        needle in form for needle in ('name="account_role"', 'type="radio"', 'value="user"', 'value="artist"'))
+        and ("خریدار" in form and "هنرمند" in form if locale == "fa" else "Buyer" in form and "Artist" in form))
+    check(f"{locale} · and it stays a registration form — no seller fields in it", all(
+        needle not in form for needle in ('name="phone"', 'name="type"', 'name="studioName"', 'name="city"')))
+    check(f"{locale} · the auth card still offers the way in for members", f"/{locale}/login" in page)
+    # the extra registration pages of the previous iteration are gone for good
+    for dead in ("/signup/buyer", "/signup/artist"):
+        check(f"{locale} · {dead} no longer exists", status(f"/{locale}{dead}") == "404")
 
 # ─────────────────────────────────────────────────────────────────────────────
-heading("2. the artist page keeps its content and the previous single-page form")
+heading("2. /creators/join is the designer door — its own page and its own form")
 
 for locale in ("fa", "en"):
-    page = curl([f"{BASE}/{locale}/signup/artist"])
+    page = curl([f"{BASE}/{locale}/creators/join"])
     plain = text(page)
-    # the form itself is the one the designer page always served: one grid with
-    # the account fields, the field of practice, the city and the two links.
-    check(f"{locale} · the previous seller form is served as one page", all(
-        needle in page for needle in (
-            'name="name"', 'name="email"', 'name="phone"', 'name="city"',
-            'name="type"', 'name="instagram"', 'name="portfolio"',
-            'name="password"', 'name="confirm"',
-        )))
-    # …and the studio file is still offered, this time as an optional block
-    check(f"{locale} · the studio file is offered as an optional block", all(
-        needle in page for needle in ('name="studioName"', 'name="experience"', 'name="bio"', 'type="checkbox"', 'aria-pressed')))
-    inputs = {m.group(1): m.group(0) for m in re.finditer(r'<input[^>]*\bname="([^"]+)"[^>]*>', page)}
-    check(f"{locale} · only the account fields are required, everything else optional",
+    form = seller_form(page)
+    check(f"{locale} · the designer path is a real page, not a redirect", status(f"/{locale}/creators/join") == "200")
+    check(f"{locale} · it serves its own seller form", all(
+        needle in form for needle in (
+            'name="name"', 'name="email"', 'name="phone"', 'name="type"', 'name="city"',
+            'name="instagram"', 'name="portfolio"', 'name="password"', 'name="confirm"',
+        )) and form.count('name="confirm"') == 1)
+    check(f"{locale} · the buyer form is not mixed into it",
+          'name="account_role"' not in page and 'data-seller-fields' not in page)
+    inputs = {m.group(1): m.group(0) for m in re.finditer(r'<input[^>]*\bname="([^"]+)"[^>]*>', form)}
+    check(f"{locale} · only the account fields are required, the rest optional",
           all(("required" in inputs.get(field, "<none>")) == (field in {"name", "email", "password", "confirm"})
-              for field in ("name", "email", "password", "confirm", "phone", "city", "instagram", "portfolio", "studioName", "bio")),
+              for field in ("name", "email", "password", "confirm", "phone", "city", "instagram", "portfolio")),
           f"{len(inputs)} inputs")
     check(f"{locale} · no step wizard is left on the page", not any(
         needle in plain for needle in ("گام بعد", "گام قبل", "گام ۲", "گام ۳", "Next step", "Step 2", "Step 3")))
-    check(f"{locale} · the sell-side content is still there (formats, families, money)", all(
-        needle in page for needle in ('name="type"',)) and (
-        ("سهم فروش" in plain and "تسویه" in plain and "بازبینی" in plain) if locale == "fa"
-        else ("revenue share" in plain.lower() and "payout" in plain.lower())))
-    check(f"{locale} · all seven delivery formats are offered",
-          all(needle in plain for needle in ("PNG", "JPG", "PSD", "AI", "SVG", "EPS")))
-    check(f"{locale} · the eight product families are offered",
-          sum(1 for name in ("کاغذ دیواری", "پارچه دکوراسیون داخلی", "پرده", "کوسن", "روتختی", "رومیزی", "پارچه مبلمان", "آثار هنری دیواری")
-              if name in plain) == 8 if locale == "fa" else "Wallpaper" in plain)
-    check(f"{locale} · the designer form is its own — the buyer's radio pair is not in it",
-          'name="phone"' in page and 'name="studioName"' in page and 'name="account_role"' not in page)
-    check(f"{locale} · links the buyer signup back", f"/{locale}/signup/buyer" in page)
-    check(f"{locale} · carries the account-type switch, marked as the artist half",
-          'aria-current="page"' in page and f"/{locale}/signup/buyer" in page
-          and ("ثبت‌نام به عنوان:" if locale == "fa" else "signing up as:").lower() in plain.lower())
+    check(f"{locale} · the page keeps its own content (perks, designers, register prompt)",
+          (("سهم فروش" in plain and "طراحانی که همراه ما هستند" in plain and "همین حالا ثبت‌نام کنید" in plain)
+           if locale == "fa" else
+           ("revenue share" in plain.lower() and "Designers already with us" in plain and "Register now" in plain)))
+    check(f"{locale} · the form says who is registering",
+          ("ثبت‌نام به عنوان هنرمند" in plain) if locale == "fa" else ("Register as an artist" in plain))
 
 # ─────────────────────────────────────────────────────────────────────────────
 heading("3. a real seller registration")
@@ -226,14 +189,8 @@ seller_payload = {
     "phone": "09120000000",
     "city": "تهران",
     "specialty": "طراح سطح",
-    "studioName": "استودیو ترنج",
-    "experience": "4-7",
-    "bio": "طراح سطح با تمرکز روی نقش‌های ایرانی و چاپ پارچه.",
     "instagram": "@toranj.studio",
     "portfolioUrl": "https://toranj.example.com",
-    "formats": ["png", "jpg", "ai", "svg", "definitely-not-a-format"],
-    "families": ["fam-home-fabric", "fam-curtain", "fam-nope"],
-    "terms": True,
 }
 result = api("POST", "/api/auth/signup", seller_payload, cookie=ARTIST_JAR)
 if result.get("error") == "too_many_attempts":
@@ -248,12 +205,11 @@ check("an artist record is linked to the account", artist_id.startswith("artist-
 
 content = load("content.json", {}).get("data", {})
 record = next((row for row in content.get("artists", []) if row.get("id") == artist_id), {})
-check("the studio file is stored", record.get("signupStudio") == "استودیو ترنج" and record.get("signupExperience") == "4-7")
-check("field of practice + city are stored", record.get("signupSpecialty") == "طراح سطح" and record.get("signupCity") == "تهران")
-check("declared formats are stored, unknown ids dropped", record.get("signupFormats") == ["png", "jpg", "ai", "svg"], str(record.get("signupFormats")))
-check("declared families are stored, unknown ids dropped", record.get("signupFamilies") == ["fam-home-fabric", "fam-curtain"], str(record.get("signupFamilies")))
-check("the short bio becomes the public bio", bool(record.get("bio", {}).get("fa", "").startswith("طراح سطح")))
+check("phone + city are stored", record.get("signupPhone") == "09120000000" and record.get("signupCity") == "تهران")
+check("field of practice is stored", record.get("signupSpecialty") == "طراح سطح", str(record.get("signupSpecialty")))
+check("the portfolio link is stored", record.get("signupPortfolioUrl") == "https://toranj.example.com")
 check("links from the form land on the artist", record.get("social", {}).get("instagram") == "toranj.studio" and record.get("social", {}).get("website") == "https://toranj.example.com")
+check("the field of practice also names the artist", record.get("profession", {}).get("fa") == "طراح سطح")
 check("the artist starts as pending review", record.get("status") == "pending")
 created_artists.append(artist_id)
 
@@ -288,7 +244,7 @@ if minimal and minimal.get("ok"):
     minimal_record = next(
         (row for row in load("content.json", {}).get("data", {}).get("artists", []) if row.get("id") == minimal_id), {})
     check("nothing is invented for the fields left empty",
-          all(minimal_record.get(key) is None for key in ("signupStudio", "signupSpecialty", "signupFormats", "signupFamilies", "signupTermsAt")),
+          all(minimal_record.get(key) is None for key in ("signupPhone", "signupCity", "signupSpecialty", "signupPortfolioUrl")),
           f"specialty={minimal_record.get('signupSpecialty')!r}")
     check("the bare seller still starts as pending review", minimal_record.get("status") == "pending")
 signup("the same e-mail cannot register twice", seller_payload, "email_taken")
@@ -300,8 +256,8 @@ login(ADMIN_JAR, "admin@rosie-atelier.ir", "admin-dev-pass")
 admin_view = api("GET", "/api/admin/artists", cookie=ADMIN_JAR)
 row = next((entry for entry in admin_view.get("artists", []) if entry.get("id") == artist_id), None)
 check("the artist appears in the admin list", row is not None)
-check("the admin receives the declared formats and families",
-      bool(row) and row.get("signupFormats") == ["png", "jpg", "ai", "svg"] and "fam-curtain" in row.get("signupFamilies", []))
+check("the admin receives the designer's file (field of practice + city)",
+      bool(row) and row.get("signupSpecialty") == "طراح سطح" and row.get("signupCity") == "تهران")
 approved = api("PATCH", "/api/admin/artists", {"id": artist_id, "status": "approved"}, cookie=ADMIN_JAR)
 check("the admin can approve the seller", approved.get("ok") is True and approved.get("artist", {}).get("status") == "approved")
 
@@ -331,7 +287,7 @@ for locale in ("fa", "en"):
         "Artist dashboard", "Work status", "Wallet & payouts", "My works", "Studio setup")
     check(f"{locale} · dashboard sections render", all(needle in plain for needle in needles))
     check(f"{locale} · the seller application is reflected",
-          ("استودیو ترنج" in plain and "طراح سطح" in plain) if locale == "fa" else ("استودیو ترنج" in plain))
+          "طراح سطح" in plain and "تهران" in plain, f"{locale} dashboard")
     check(f"{locale} · delivery + formats panel is there",
           all(needle in plain for needle in ("رنگ‌بندی", "فایل تحویل", "حجم کل تحویل")) if locale == "fa"
           else all(needle in plain for needle in ("Colourways", "Delivery files", "Total delivery size")))
@@ -435,5 +391,5 @@ print()
 if failures:
     print(f"✘ {len(failures)} check(s) failed: {', '.join(failures)}")
     sys.exit(1)
-print("✔ the account-type signup pages and the artist dashboard all verified")
+print("✔ both registration doors and the artist dashboard all verified")
 PY

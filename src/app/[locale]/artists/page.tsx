@@ -42,7 +42,7 @@ export default async function ArtistsPage({ params }: { params: Promise<{ locale
         locale={locale}
         zoomDirection="in"
       >
-        <Button href={href(locale, "/signup/artist")} variant="outline">{d.nav.becomeCreator}</Button>
+        <Button href={href(locale, "/creators/join")} variant="outline">{d.nav.becomeCreator}</Button>
       </PageHero>
       <div className="container-x pb-20">
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">

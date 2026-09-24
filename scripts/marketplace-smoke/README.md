@@ -25,7 +25,7 @@ bash scripts/marketplace-smoke/artist-e2e.sh      # artist studio: prices, sale,
 bash scripts/marketplace-smoke/sub-e2e.sh         # download pass, covered download, cancel
 bash scripts/marketplace-smoke/family-e2e.sh      # product families: shop grouping, sidebar tree, ?family=
 bash scripts/marketplace-smoke/formats-e2e.sh     # colourways + PNG/JPG/preview/AI/PSD/SVG/EPS delivery
-bash scripts/marketplace-smoke/artist-dashboard-e2e.sh   # buyer/seller signup split + artist dashboard
+bash scripts/marketplace-smoke/artist-dashboard-e2e.sh   # the two signup doors + artist dashboard
 bash scripts/marketplace-smoke/pages.sh           # every storefront/admin page renders
 DATA=dist/.next/standalone/data \
 MARKETPLACE_MULTIPART_THRESHOLD_MB=5 \
@@ -46,19 +46,20 @@ Notes:
   builds the real files with `sharp`/`pdf-lib`), checks the refusal paths (`invalid_format`,
   `unsupported_type`, `raster_required`, `invalid_signature`), publishes it, buys it once and downloads
   all twelve deliverables — each must be byte-identical to what the artist uploaded.
-- `artist-dashboard-e2e.sh` is the registration rig: it asserts `/signup` is the chooser (both account
-  types as a real radio choice, one page each), that the buyer page (`/signup/buyer`) keeps its four
-  fields and the switch, that the artist page (`/signup/artist`) keeps its sell-side content and serves
-  the seller form as one single page — the account fields required, the studio block (studio,
-  experience, bio, formats, families, terms) optional and no step wizard left — that the old
-  `/creators/join` path 307s to the artist page, that `POST /api/auth/signup` really stores
-  that file on the Artist record when it is filled in and invents nothing when it is not (and that the
-  same e-mail cannot register twice), that the admin sees it, and that `/artist` is the dashboard
-  (signed-out redirect, buyer upsell, artist KPIs/works/delivery/wallet) while `/artist/portfolio` still
-  serves the portfolio manager. It creates and deletes its own accounts. **Note:** the signup endpoint
-  throttles by IP (5 attempts/hour, in-process), so a repeated run in the same server process reports
-  the throttled checks as skips instead of passes, and a run that cannot register at all exits with
-  code **2** and tells you to restart the server (or wait), so a green run always means "verified".
+- `artist-dashboard-e2e.sh` is the registration rig: it asserts the two doors the site always had —
+  `/signup` serves the registration form with the account-type choice inside it («خریدار» /
+  «هنرمند / طراح», radios named `account_role`) and the four account fields, with no seller field in it,
+  and `/creators/join` is a real designer page (perks, designers, register prompt) with
+  its own single-page seller form (name, e-mail, phone, field of practice, city, Instagram, portfolio,
+  password pair) where only the four account fields are required and no step wizard exists. It also
+  asserts that the extra registration pages tried in between (`/signup/buyer`, `/signup/artist`) are
+  gone (404). Then it registers a designer for real and requires that `POST /api/auth/signup` stores
+  exactly what the form sent (phone, city, field of practice, Instagram handle, portfolio link) on the
+  Artist record, invents nothing when a field is left out, rejects a second registration with the same
+  e-mail, that the admin sees the file and can approve it, that `/artist` is the dashboard (signed-out
+  redirect, buyer upsell, artist KPIs/works/delivery/wallet) while `/artist/portfolio` still serves the
+  portfolio manager, and that signing out works everywhere. It creates and deletes its own accounts.
+  **Note:** the signup endpoint
 - The scripts print each step; `http-e2e.sh` also asserts that the downloaded bytes are byte-identical
   to the uploaded master and that a tampered token is rejected.
 - They write to the app's local storage backend (`data/objects` and `data/mk-*.json`). Point `DATA` at

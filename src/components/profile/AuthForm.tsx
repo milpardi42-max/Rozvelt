@@ -10,7 +10,7 @@ import { href } from "@/lib/utils";
 
 interface AuthFormProps {
   mode: "login" | "signup";
-  /** Role pre-selected for signup (the buyer page pins this to "user") */
+  /** Role pre-selected for signup (e.g. "artist" from /creators/join) */
   defaultRole?: "user" | "artist";
   /** Called with credentials right after a successful signup, before navigation */
   onSignupSuccess?: (email: string, password: string) => void;
@@ -38,13 +38,7 @@ export function AuthForm({ mode, defaultRole, onSignupSuccess, prefill, autoSubm
   const router = useRouter();
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
-  /*
-   * This form is the *buyer* form (/signup/buyer). Designers register on their
-   * own page (/signup/artist) which collects the studio, the delivery formats
-   * and the product families — the account-type choice lives on /signup and in
-   * the switch above this form, so there is no role radio inside it.
-   */
-  const role = defaultRole ?? "user";
+  const [role, setRole] = useState<"user" | "artist">(defaultRole ?? "user");
   const fa = locale === "fa";
 
   function getError(code: string): string {
@@ -129,6 +123,34 @@ export function AuthForm({ mode, defaultRole, onSignupSuccess, prefill, autoSubm
             minLength={6}
             autoComplete="new-password"
           />
+        </Field>
+      )}
+
+      {/* Role selector — only on signup */}
+      {mode === "signup" && (
+        <Field label={fa ? "نوع حساب" : "Account type"}>
+          <div className="flex gap-3">
+            <label className="flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="account_role"
+                value="user"
+                checked={role === "user"}
+                onChange={() => setRole("user")}
+              />
+              {fa ? "خریدار" : "Buyer"}
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="account_role"
+                value="artist"
+                checked={role === "artist"}
+                onChange={() => setRole("artist")}
+              />
+              {fa ? "هنرمند / طراح" : "Artist / Designer"}
+            </label>
+          </div>
         </Field>
       )}
 
