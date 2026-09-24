@@ -20,6 +20,9 @@ check "/fa/portfolio" "portfolio gallery fa (founder introduction + works)"
 check "/en/portfolio" "portfolio gallery en"
 check "/fa/razieh" "the founder's personal portfolio fa"
 check "/en/razieh" "the founder's personal portfolio en"
+check "/fa/shop" "shop fa (new hero + catalogue)"
+check "/en/shop" "shop en (new hero + catalogue)"
+check "/fa/shop?family=wallpaper" "shop filtered by family fa"
 
 echo
 echo "── academy pages (hero video, course pages, admin-driven content)"

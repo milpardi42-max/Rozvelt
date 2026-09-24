@@ -28,6 +28,7 @@ bash scripts/marketplace-smoke/formats-e2e.sh     # colourways + PNG/JPG/preview
 bash scripts/marketplace-smoke/artist-dashboard-e2e.sh   # the two signup doors + artist dashboard
 bash scripts/marketplace-smoke/pages.sh           # every storefront/admin page renders
 bash scripts/marketplace-smoke/portfolio-e2e.sh   # the founder's introduction on /portfolio
+bash scripts/marketplace-smoke/shop-hero-e2e.sh    # the shop hero: panel · numbers · mosaic · family rail
 DATA=dist/.next/standalone/data \
 MARKETPLACE_MULTIPART_THRESHOLD_MB=5 \
 bash scripts/marketplace-smoke/multipart-e2e.sh   # 12 MB master uploaded in 8 MB chunks
@@ -71,6 +72,12 @@ Notes:
   It then checks that the two pages are one experience: the atelier's page links to `/{locale}/razieh`,
   the personal portfolio page links back and still carries its own six sections, and both are
   reachable from the footer and the sitemap.
+- `shop-hero-e2e.sh` is the shop-hero rig: it reads the store the server is using (`DATA=…`) and
+  recomputes the four hero numbers from it, so the panel can never claim a catalogue size the shop
+  does not have. It also checks the mosaic's lead/second pieces (link, badge, SKU, family, price),
+  the colourways (names + real colour images), all eight `?family=` chips with their counts, the
+  service banner — and that the catalogue below the hero (family sections, result counter, family
+  isolation) is untouched.
 - The scripts print each step; `http-e2e.sh` also asserts that the downloaded bytes are byte-identical
   to the uploaded master and that a tampered token is rejected.
 - They write to the app's local storage backend (`data/objects` and `data/mk-*.json`). Point `DATA` at

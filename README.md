@@ -120,6 +120,27 @@ including the audit, every new route, the env flags and a step-by-step test reci
 Without `ZARINPAL_MERCHANT_ID` the built-in sandbox gateway takes over, so a full test purchase works
 end-to-end today.
 
+## The shop hero
+
+The shop's hero (`src/components/shop/ShopHero.tsx`, rendered by `/{locale}/shop`) is one section in
+four movements — and the only part of the shop that is custom; the catalogue below it (family
+sections, sidebar tree, filters, sorting) is `ShopFiltered`, unchanged:
+
+1. **the boutique panel** — a dark editorial card: the shop eyebrow, the collection's title and copy,
+   and the two doors into the catalogue (`/shop?owner=site` · `/shop?owner=artist`);
+2. **live numbers** taken from the real catalogue, not typed by hand: products · families in use
+   (e.g. `4/8`) · colourways · contributing designers;
+3. **the product mosaic** — the lead site-owned featured piece (family · maker · SKU · price), a
+   second piece, and the lead's colourways with their swatch tiles, instead of a single flat image;
+4. **the family rail** — all eight families of `lib/data/families.ts` as `?family=<slug>` chips with
+   their counts, beside the service note from the shop banner.
+
+`scripts/marketplace-smoke/shop-hero-e2e.sh` pins it down in both locales: the panel and its two
+CTAs, the four numbers **recomputed from the store the server is using** (`DATA=…`), the mosaic
+(lead link, badge, SKU, family, second piece, colourway names and images), all eight family links
+with their real counts, and that the catalogue below (family sections, result counter, `?family=`
+isolation) still behaves.
+
 ## Product taxonomy (families)
 
 Products belong to one of eight families, defined once in `src/lib/data/families.ts` and stored on
