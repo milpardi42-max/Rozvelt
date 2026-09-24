@@ -58,7 +58,9 @@ Notes:
   Artist record, invents nothing when a field is left out, rejects a second registration with the same
   e-mail, that the admin sees the file and can approve it, that `/artist` is the dashboard (signed-out
   redirect, buyer upsell, artist KPIs/works/delivery/wallet) while `/artist/portfolio` still serves the
-  portfolio manager, and that signing out works everywhere. It creates and deletes its own accounts.
+  portfolio manager, that `/account` for an artist is *exactly* the artist dashboard and carries none of
+  the buyer account sections (while a buyer keeps their account page), and that signing out works
+  everywhere. It creates and deletes its own accounts.
   **Note:** the signup endpoint
 - The scripts print each step; `http-e2e.sh` also asserts that the downloaded bytes are byte-identical
   to the uploaded master and that a tampered token is rejected.

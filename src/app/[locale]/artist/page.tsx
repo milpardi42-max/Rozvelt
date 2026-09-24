@@ -2,10 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Palette, Sparkles } from "lucide-react";
-import { ArtistDashboardView } from "@/components/artist/ArtistDashboardView";
-import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { ArtistDashboardPanel } from "@/components/artist/ArtistDashboardPanel";
 import { getSession } from "@/lib/auth";
-import { getArtistDashboard } from "@/lib/artist/dashboard";
 import type { Locale } from "@/lib/i18n/types";
 import { href } from "@/lib/utils";
 
@@ -66,20 +64,5 @@ export default async function ArtistDashboardPage({ params }: { params: Promise<
     );
   }
 
-  const data = await getArtistDashboard({ artistId: session.artistId ?? null, userId: session.id });
-
-  return (
-    <div className="container-x pt-[calc(var(--header-h)+1.5rem)] pb-24">
-      <Breadcrumb
-        items={[
-          { label: fa ? "خانه" : "Home", href: href(locale, "/") },
-          { label: fa ? "پنل هنرمند" : "Artist" },
-          { label: fa ? "داشبورد" : "Dashboard" },
-        ]}
-        locale={locale}
-        className="mb-6"
-      />
-      <ArtistDashboardView locale={locale} data={data} />
-    </div>
-  );
+  return <ArtistDashboardPanel locale={locale} userId={session.id} artistId={session.artistId} />;
 }

@@ -162,6 +162,10 @@ The artist area:
   chips, latest ledger rows and the sales mix. Quick actions deep-link into the studio tabs.
 - `/{locale}/artist/marketplace` — the sales studio (`?tab=assets|upload|wallet|analytics|affiliate`).
 - `/{locale}/artist/portfolio` — the portfolio manager (patterns, products, profile, stats).
+- `/{locale}/account` — **the designer's own profile page is the dashboard**: an artist (or any account
+  with an artist profile) gets `ArtistDashboardPanel` — the very same server-rendered dashboard, with
+  none of the buyer sections (no overview, reservations, orders or settings, no account banner). Both
+  routes render byte-for-byte the same content. **Buyers** keep their account view untouched.
 - Signed-out visitors are redirected to login; a signed-in **buyer** is shown an honest upsell to the
   designer registration instead of a form they cannot use (the artist APIs still enforce the role).
 

@@ -272,7 +272,11 @@ if buyer and buyer.get("ok"):
     upsell = curl(["-b", BUYER_JAR, f"{BASE}/fa/artist"])
     plain = text(upsell)
     check("a buyer does not get the artist dashboard", "خانه‌ی هنرمندان" in plain and "ثبت‌نام هنرمند / فروشنده" in plain)
-    check("the buyer keeps their own account page", len(curl(["-b", BUYER_JAR, f"{BASE}/fa/account"])) > 5000)
+    buyer_account = curl(["-b", BUYER_JAR, f"{BASE}/fa/account"])
+    buyer_bundle = "".join(curl([f"{BASE}{src}"]) for src in re.findall(r'<script src="([^"]+\.js)"', buyer_account))
+    check("the buyer keeps their own account page (sections ship with it)",
+          len(buyer_account) > 5000 and "خلاصه حساب" in buyer_bundle and "رزروهای من" in buyer_bundle
+          and "راه‌اندازی استودیو" not in buyer_account)
 else:
     print("  ↷ buyer upsell checks — skipped (no buyer account in this run)")
 
@@ -294,6 +298,24 @@ for locale in ("fa", "en"):
     check(f"{locale} · quick actions deep-link into the studio",
           all(f"/{locale}/artist/marketplace?tab={tab}" in page for tab in ("upload", "assets", "wallet")))
     check(f"{locale} · finished studio status", "تأییدشده" in plain if locale == "fa" else "Approved" in plain)
+
+# ── the designer's profile page is the artist dashboard, nothing else ─────────
+# /account renders the very same panel for a designer, so the two pages must
+# carry the same text — and none of the buyer account sections.
+for locale in ("fa", "en"):
+    profile = curl(["-b", ARTIST_JAR, f"{BASE}/{locale}/account"])
+    dashboard = curl(["-b", ARTIST_JAR, f"{BASE}/{locale}/artist"])
+    profile_plain = text(profile)
+    check(f"{locale} · an artist's /account shows the artist dashboard",
+          all(needle in profile_plain for needle in (
+              ("داشبورد هنرمند", "وضعیت آثار", "کیف پول و تسویه", "آثار من", "راه‌اندازی استودیو") if locale == "fa"
+              else ("Artist dashboard", "Work status", "Wallet & payouts", "My works", "Studio setup"))))
+    check(f"{locale} · and it is exactly that — the same content as /artist",
+          profile_plain == text(dashboard))
+    check(f"{locale} · none of the buyer account sections are left on it",
+          all(needle not in profile_plain for needle in (
+              ("خلاصه حساب", "رزروهای من", "تنظیمات حساب") if locale == "fa"
+              else ("Overview", "My reservations", "Settings"))))
 
 # the numbers on the page must equal what the artist APIs report
 analytics = api("GET", "/api/marketplace/artist/analytics?days=30", cookie=ARTIST_JAR).get("analytics", {})
