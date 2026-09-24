@@ -101,7 +101,20 @@ interface AuthCtx {
     email: string,
     password: string,
     role?: "user" | "artist",
-    extra?: { phone?: string; city?: string; specialty?: string; instagram?: string; portfolioUrl?: string },
+    extra?: {
+      /* seller registration — ignored for buyer accounts */
+      phone?: string;
+      city?: string;
+      specialty?: string;
+      instagram?: string;
+      portfolioUrl?: string;
+      studioName?: string;
+      experience?: string;
+      bio?: string;
+      formats?: string[];
+      families?: string[];
+      terms?: boolean;
+    },
   ) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
 }

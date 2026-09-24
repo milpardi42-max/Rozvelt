@@ -9,6 +9,7 @@ export const tr: Record<string, Bilingual> = {
   works:       { fa: "نمونه‌کارها",   en: "Works" },
   academic:    { fa: "آکادمیک",       en: "Academic" },
   contact:     { fa: "تماس",          en: "Contact" },
+  atelier:     { fa: "رزی آتلیه",     en: "Rosie Atelier" },
   founded:     { fa: "تأسیس ۱۳۸۸",   en: "Est. 2009" },
 
   /* ---------- hero ---------- */

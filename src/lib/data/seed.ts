@@ -138,7 +138,7 @@ export const products: Product[] = [
     id: "product-wallpaper-quiet-garden", sku: "RA-WP-2001", slug: "wallpaper-quiet-garden",
     title: L("کاغذدیواری — باغ آرام", "Wallpaper — Quiet Garden"),
     description: L("کاغذدیواری نان‌وون پریمیوم با الگوی گیاهی باغ آرام؛ مناسب نشیمن و اتاق خواب روشن.", "Premium non-woven wallpaper with the Quiet Garden botanical — ideal for bright living rooms and bedrooms."),
-    categoryId: "cat-botanical", patternId: "pattern-quiet-garden", artistId: "artist-niloufar-rad",
+    categoryId: "cat-botanical", familyId: "fam-wallpaper", patternId: "pattern-quiet-garden", artistId: "artist-niloufar-rad",
     price: { fa: 2450000, en: 89 }, compareAt: { fa: 2750000, en: 99 },
     colors: [
       color("ivory", "عاجی", "Ivory", "#efe9dd", "/images/colorways/qg-ivory.jpg"),
@@ -159,7 +159,7 @@ export const products: Product[] = [
     id: "product-wallpaper-copper-damask", sku: "RA-WP-2002", slug: "wallpaper-copper-damask",
     title: L("کاغذدیواری — داماسک مسی", "Wallpaper — Copper Damask"),
     description: L("کاغذدیواری لوکس با نقش داماسک مسی روی اسلیت تیره؛ برای لابی، هتل و فضاهای شبانه.", "Luxury wallpaper with copper damask on deep slate — for lobbies, hotels and evening spaces."),
-    categoryId: "cat-luxury", patternId: "pattern-copper-damask", artistId: "artist-arman-kian",
+    categoryId: "cat-luxury", familyId: "fam-wallpaper", patternId: "pattern-copper-damask", artistId: "artist-arman-kian",
     price: { fa: 3200000, en: 118 },
     colors: [
       color("slate", "اسلیت", "Slate", "#1c1f26", "/images/colorways/cd-slate.jpg"),
@@ -180,7 +180,7 @@ export const products: Product[] = [
     id: "product-fabric-dusty-bloom", sku: "RA-FB-2003", slug: "fabric-dusty-bloom",
     title: L("طراحی پارچه — شکوفه‌ی غبارآلود", "Fabric design — Dusty Bloom"),
     description: L("پارچه کتان چاپی با گل‌های صدتومانی آبرنگی؛ مناسب روکش مبل، کوسن و لباس خانگی.", "Printed linen with watercolour peonies — for upholstery, cushions and home apparel."),
-    categoryId: "cat-floral", patternId: "pattern-dusty-bloom", artistId: "artist-sara-mehr",
+    categoryId: "cat-floral", familyId: "fam-home-fabric", patternId: "pattern-dusty-bloom", artistId: "artist-sara-mehr",
     price: { fa: 980000, en: 48 },
     colors: [
       color("rose", "رز غبارآلود", "Dusty rose", "#c99a92", "/images/colorways/db-rose.jpg"),
@@ -201,7 +201,7 @@ export const products: Product[] = [
     id: "product-fabric-arc-lattice", sku: "RA-FB-2004", slug: "fabric-arc-lattice",
     title: L("طراحی پارچه — شبکه‌ی کمان", "Fabric design — Arc Lattice"),
     description: L("پارچه مبلی با الگوی هندسی آرت‌دکو؛ مس و سرمه‌ای برای مبلمان و پنل دیواری.", "Upholstery fabric with art-deco geometry — copper and navy for seating and wall panels."),
-    categoryId: "cat-geometric", patternId: "pattern-arc-lattice", artistId: "artist-arman-kian",
+    categoryId: "cat-geometric", familyId: "fam-home-fabric", patternId: "pattern-arc-lattice", artistId: "artist-arman-kian",
     price: { fa: 1250000, en: 58 },
     colors: [
       color("navy", "سرمه‌ای", "Navy", "#1b2e4b", "/images/colorways/al-navy.jpg"),
@@ -222,7 +222,7 @@ export const products: Product[] = [
     id: "product-curtain-quiet-garden", sku: "RA-CR-2005", slug: "curtain-quiet-garden",
     title: L("پرده — باغ آرام", "Curtain — Quiet Garden"),
     description: L("پرده کتان دو‌لایه با چاپ گیاهی ظریف؛ نور ملایم، آستر مات و دوخت سفارشی.", "Double-layer linen curtain with a soft botanical print; gentle light, blackout lining, made to measure."),
-    categoryId: "cat-botanical", patternId: "pattern-quiet-garden", artistId: null,
+    categoryId: "cat-botanical", familyId: "fam-curtain", patternId: "pattern-quiet-garden", artistId: null,
     price: { fa: 4200000, en: 195 },
     colors: [
       color("ivory", "عاجی", "Ivory", "#efe9dd", "/images/new/new-curtain-room.jpg"),
@@ -242,7 +242,7 @@ export const products: Product[] = [
     id: "product-curtain-copper-damask", sku: "RA-CR-2006", slug: "curtain-copper-damask",
     title: L("پرده مخمل — داماسک مسی", "Velvet curtain — Copper Damask"),
     description: L("پرده مخمل سنگین با نقش داماسک؛ عمق شبانه برای اتاق خواب و سالن پذیرایی لوکس.", "Heavy velvet curtain with damask motif — nocturnal depth for bedrooms and formal lounges."),
-    categoryId: "cat-luxury", patternId: "pattern-copper-damask", artistId: null,
+    categoryId: "cat-luxury", familyId: "fam-curtain", patternId: "pattern-copper-damask", artistId: null,
     price: { fa: 5800000, en: 265 },
     colors: [
       color("navy", "سرمه‌ای", "Navy", "#1b2e4b", "/images/products/curtain-velvet.jpg"),
@@ -262,7 +262,7 @@ export const products: Product[] = [
     id: "product-decor-cushion-set", sku: "RA-DC-2007", slug: "decor-cushion-set",
     title: L("ست دکور — کوسن‌های الگو", "Décor set — Pattern cushions"),
     description: L("ست سه‌تایی کوسن با الگوهای گیاهی و داماسک؛ ترکیب کتان و مخمل برای نشیمن کلاسیک.", "Set of three cushions in botanical and damask patterns — linen and velvet mix for a classical lounge."),
-    categoryId: "cat-botanical", patternId: "pattern-quiet-garden", artistId: null,
+    categoryId: "cat-botanical", familyId: "fam-cushion", patternId: "pattern-quiet-garden", artistId: null,
     price: { fa: 1890000, en: 86 }, compareAt: { fa: 2200000, en: 98 },
     colors: [
       color("mixed", "ترکیبی", "Mixed", "#c99a92", "/images/new/new-decor-set.jpg"),
@@ -302,7 +302,7 @@ export const products: Product[] = [
     id: "product-wallpaper-lapis-eslimi", sku: "RA-WP-2009", slug: "wallpaper-lapis-eslimi",
     title: L("کاغذدیواری — اسلیمی لاجورد", "Wallpaper — Lapis Eslimi"),
     description: L("کاغذدیواری با بازخوانی مینیمال نقش کاشی ایرانی؛ لاجورد و طلای کهنه برای فضاهای خاص.", "Wallpaper reinterpreting Persian tile ornament in lapis and antique gold — for distinctive interiors."),
-    categoryId: "cat-persian", patternId: "pattern-lapis-eslimi", artistId: "artist-hossein-tabrizi",
+    categoryId: "cat-persian", familyId: "fam-wallpaper", patternId: "pattern-lapis-eslimi", artistId: "artist-hossein-tabrizi",
     price: { fa: 2900000, en: 108 },
     colors: [
       color("lapis", "لاجورد", "Lapis", "#1f3a8a", "/images/colorways/le-lapis.jpg"),
@@ -458,7 +458,7 @@ export const portfolios: Portfolio[] = [
 /* ------------------------------------------------------------------ */
 const body = (fa: string, en: string) => L(fa, en);
 export const education: EducationItem[] = [
-  { id: "edu-pattern-design-foundations", slug: "pattern-design-foundations", type: "course", title: L("مبانی طراحی الگو", "Pattern Design Foundations"), excerpt: L("از موتیف تا تکرار بی‌درز؛ برای کاغذدیواری، پارچه و پرده.", "From motif to seamless repeat — for wallpaper, fabric and curtains."), body: body("در این دوره یاد می‌گیرید چطور یک موتیف را طراحی، پالت را انتخاب و تکرار بی‌درز بسازید. هر درس با تمرین عملی همراه است.\n\nفصل اول به مشاهده و اسکیس می‌پردازد. فصل دوم به ساختار تکرار: بلوک، نیم‌افت و آجری. فصل سوم درباره‌ی رنگ و مقیاس برای کاغذ دیواری و پارچه است.", "In this course you learn to design a motif, choose a palette and build a seamless repeat. Every lesson comes with a practical exercise.\n\nChapter one covers observation and sketching. Chapter two covers repeat structures: block, half-drop and brick. Chapter three covers colour and scale for wallpaper and textile."), image: "/images/education/e01.jpg", authorId: "artist-niloufar-rad", difficulty: "beginner", durationMin: 420, lessons: 18, price: { fa: 980000, en: 29 }, lessonList: [ { id: "l01", title: L("معرفی دوره و ابزارها", "Course intro & tools"), durationMin: 12, free: true }, { id: "l02", title: L("مشاهده و اسکیس اولیه", "Observation & first sketch"), durationMin: 22, free: true }, { id: "l03", title: L("ساده‌سازی موتیف", "Simplifying the motif"), durationMin: 28 }, { id: "l04", title: L("تکرار بلوک", "Block repeat"), durationMin: 24 }, { id: "l05", title: L("تکرار نیم‌افت", "Half-drop repeat"), durationMin: 26 }, { id: "l06", title: L("تکرار آجری", "Brick repeat"), durationMin: 24 }, { id: "l07", title: L("انتخاب پالت رنگی", "Choosing a colour palette"), durationMin: 30 }, { id: "l08", title: L("مقیاس برای کاغذدیواری", "Scale for wallpaper"), durationMin: 22 }, { id: "l09", title: L("مقیاس برای پارچه", "Scale for fabric"), durationMin: 20 }, { id: "l10", title: L("تبدیل به فایل دیجیتال", "Converting to digital file"), durationMin: 35 }, { id: "l11", title: L("تمیزکاری و اسکن", "Clean-up & scanning"), durationMin: 28 }, { id: "l12", title: L("رنگ‌بندی جدید (کالروِی)", "New colourway"), durationMin: 30 }, { id: "l13", title: L("آماده‌سازی فایل چاپ", "Preparing print file"), durationMin: 25 }, { id: "l14", title: L("خروجی AI و PDF", "Exporting AI & PDF"), durationMin: 18 }, { id: "l15", title: L("ارائه به مشتری", "Presenting to a client"), durationMin: 20 }, { id: "l16", title: L("لایسنس تجاری", "Commercial licence"), durationMin: 15 }, { id: "l17", title: L("قیمت‌گذاری و فروش", "Pricing & selling"), durationMin: 18 }, { id: "l18", title: L("پروژه نهایی", "Final project"), durationMin: 45 }, ], categoryId: "cat-botanical", patternIds: ["pattern-quiet-garden", "pattern-dusty-bloom"], productIds: ["product-wallpaper-quiet-garden", "product-fabric-dusty-bloom"], featured: true, popular: true, publishedAt: "2026-06-01" },
+  { id: "edu-pattern-design-foundations", slug: "pattern-design-foundations", type: "course", title: L("مبانی طراحی الگو", "Pattern Design Foundations"), excerpt: L("از موتیف تا تکرار بی‌درز؛ برای کاغذدیواری، پارچه و پرده.", "From motif to seamless repeat — for wallpaper, fabric and curtains."), body: body("در این دوره یاد می‌گیرید چطور یک موتیف را طراحی، پالت را انتخاب و تکرار بی‌درز بسازید. هر درس با تمرین عملی همراه است.\n\nفصل اول به مشاهده و اسکیس می‌پردازد. فصل دوم به ساختار تکرار: بلوک، نیم‌افت و آجری. فصل سوم درباره‌ی رنگ و مقیاس برای کاغذ دیواری و پارچه است.", "In this course you learn to design a motif, choose a palette and build a seamless repeat. Every lesson comes with a practical exercise.\n\nChapter one covers observation and sketching. Chapter two covers repeat structures: block, half-drop and brick. Chapter three covers colour and scale for wallpaper and textile."), image: "/images/education/e01.jpg", authorId: "artist-razieh-khairipour", difficulty: "beginner", durationMin: 420, lessons: 18, price: { fa: 980000, en: 29 }, lessonList: [ { id: "l01", title: L("معرفی دوره و ابزارها", "Course intro & tools"), durationMin: 12, free: true }, { id: "l02", title: L("مشاهده و اسکیس اولیه", "Observation & first sketch"), durationMin: 22, free: true }, { id: "l03", title: L("ساده‌سازی موتیف", "Simplifying the motif"), durationMin: 28 }, { id: "l04", title: L("تکرار بلوک", "Block repeat"), durationMin: 24 }, { id: "l05", title: L("تکرار نیم‌افت", "Half-drop repeat"), durationMin: 26 }, { id: "l06", title: L("تکرار آجری", "Brick repeat"), durationMin: 24 }, { id: "l07", title: L("انتخاب پالت رنگی", "Choosing a colour palette"), durationMin: 30 }, { id: "l08", title: L("مقیاس برای کاغذدیواری", "Scale for wallpaper"), durationMin: 22 }, { id: "l09", title: L("مقیاس برای پارچه", "Scale for fabric"), durationMin: 20 }, { id: "l10", title: L("تبدیل به فایل دیجیتال", "Converting to digital file"), durationMin: 35 }, { id: "l11", title: L("تمیزکاری و اسکن", "Clean-up & scanning"), durationMin: 28 }, { id: "l12", title: L("رنگ‌بندی جدید (کالروِی)", "New colourway"), durationMin: 30 }, { id: "l13", title: L("آماده‌سازی فایل چاپ", "Preparing print file"), durationMin: 25 }, { id: "l14", title: L("خروجی AI و PDF", "Exporting AI & PDF"), durationMin: 18 }, { id: "l15", title: L("ارائه به مشتری", "Presenting to a client"), durationMin: 20 }, { id: "l16", title: L("لایسنس تجاری", "Commercial licence"), durationMin: 15 }, { id: "l17", title: L("قیمت‌گذاری و فروش", "Pricing & selling"), durationMin: 18 }, { id: "l18", title: L("پروژه نهایی", "Final project"), durationMin: 45 }, ], categoryId: "cat-botanical", patternIds: ["pattern-quiet-garden", "pattern-dusty-bloom"], productIds: ["product-wallpaper-quiet-garden", "product-fabric-dusty-bloom"], featured: true, popular: true, publishedAt: "2026-06-01" },
   { id: "edu-colour-for-interiors", slug: "colour-for-interiors", type: "course", title: L("رنگ برای فضای داخلی", "Colour for Interiors"), excerpt: L("چطور پالت کاغذدیواری، پارچه و پرده را با نور فضا هماهنگ کنیم.", "How to tune wallpaper, fabric and curtain palettes to a room's light."), body: body("سارا مهر با مثال‌های واقعی توضیح می‌دهد چطور یک پالت را برای نور شمالی یا جنوبی تنظیم کند.", "Sara Mehr explains with real examples how to adjust a palette for north- or south-facing light."), image: "/images/education/e02.jpg", authorId: "artist-sara-mehr", difficulty: "intermediate", durationMin: 180, lessons: 6, price: { fa: 590000, en: 18 }, categoryId: "cat-floral", patternIds: ["pattern-dusty-bloom", "pattern-little-moons"], productIds: [], featured: false, popular: true, publishedAt: "2026-08-05", draftStatus: "published" as const },
   { id: "edu-geometry-and-rhythm", slug: "geometry-and-rhythm", type: "course", title: L("هندسه و ریتم", "Geometry & Rhythm"), excerpt: L("ساخت الگوهای هندسی دقیق برای کاغذدیواری و پارچه مبلی.", "Building precise geometric patterns for wallpaper and upholstery fabric."), body: body("آرمان کیان روش کارش با شبکه‌های شش‌ضلعی و تقارن‌های ۱۷گانه را آموزش می‌دهد.", "Arman Kian teaches his method with hexagonal grids and the 17 wallpaper symmetry groups."), image: "/images/education/e03.jpg", authorId: "artist-arman-kian", difficulty: "advanced", durationMin: 300, lessons: 12, categoryId: "cat-geometric", patternIds: ["pattern-arc-lattice", "pattern-hairline-grid"], productIds: ["product-fabric-arc-lattice", "product-wallpaper-copper-damask"], featured: true, popular: false, publishedAt: "2026-05-20" },
   { id: "edu-persian-ornament-course", slug: "persian-ornament-course", type: "course", title: L("نقش ایرانی: اسلیمی و ختایی", "Persian Ornament: Eslimi & Khatai"), excerpt: L("یادگیری سه خانواده اصلی نقش ایرانی برای طراحی معاصر.", "Learning the three main families of Persian ornament for contemporary design."), body: body("حسین تبریزی با چهار دهه تجربه، اسلیمی، ختایی و بته‌جقه را آموزش می‌دهد.", "Hossein Tabrizi with four decades of experience teaches eslimi, khatai and boteh."), image: "/images/education/e04.jpg", authorId: "artist-hossein-tabrizi", difficulty: "intermediate", durationMin: 360, lessons: 14, price: { fa: 890000, en: 27 }, categoryId: "cat-persian", patternIds: ["pattern-lapis-eslimi"], productIds: [], featured: false, popular: true, publishedAt: "2026-04-02", draftStatus: "published" as const },

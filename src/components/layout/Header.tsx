@@ -3,16 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, Menu, Moon, ShoppingBag, Sun, User, X } from "lucide-react";
+import { ChevronDown, LayoutDashboard, Menu, Moon, ReceiptText, ShoppingBag, Sun, Store, User, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth, useCart, useLocale, useTheme } from "@/components/providers/AppProviders";
+import { SignOutButton } from "@/components/profile/SignOutButton";
 import { cn, href, t } from "@/lib/utils";
 import { Logo } from "./Logo";
-import { MegaMenu } from "./MegaMenu";
 import { StoreDropdown } from "./StoreDropdown";
 import type { NavData } from "./nav-data";
 
-type Panel = "explore" | "store" | null;
+type Panel = "store" | null;
 
 export function Header({ nav }: { nav: NavData }) {
   const { locale, dict } = useLocale();
@@ -20,11 +20,14 @@ export function Header({ nav }: { nav: NavData }) {
   const { count, open: openCart } = useCart();
   const { theme, toggle } = useTheme();
   const { user } = useAuth();
+  const fa = locale === "fa";
 
   const [scrolled, setScrolled] = useState(false);
   const [panel, setPanel] = useState<Panel>(null);
   const [mobile, setMobile] = useState(false);
+  const [accountMenu, setAccountMenu] = useState(false);
   const closeTimer = useRef<number | null>(null);
+  const accountRef = useRef<HTMLDivElement | null>(null);
 
   const isHome = pathname === `/${locale}` || pathname === `/${locale}/`;
   const transparent = isHome && !scrolled && panel === null && !mobile;
@@ -47,7 +50,25 @@ export function Header({ nav }: { nav: NavData }) {
   useEffect(() => {
     setPanel(null);
     setMobile(false);
+    setAccountMenu(false);
   }, [pathname]);
+
+  /* Dismiss the account menu on outside click or Escape. */
+  useEffect(() => {
+    if (!accountMenu) return;
+    const onDown = (event: MouseEvent) => {
+      if (!accountRef.current?.contains(event.target as Node)) setAccountMenu(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setAccountMenu(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [accountMenu]);
 
   const openPanel = useCallback((p: Panel) => {
     if (closeTimer.current) window.clearTimeout(closeTimer.current);
@@ -61,12 +82,16 @@ export function Header({ nav }: { nav: NavData }) {
   const otherLocale = locale === "fa" ? "en" : "fa";
   const switchHref = pathname.replace(new RegExp(`^/${locale}`), `/${otherLocale}`) || `/${otherLocale}`;
 
+  /*
+   * Primary navigation — the four sections, in the order set by the shop:
+   * آکادمی · هنرمندان · پورتفولیو · فروشگاه
+   * الگوها و فایل دیجیتال از داخل پنل فروشگاه و فوتر در دسترس می‌مانند.
+   */
   const links: { key: string; label: string; href: string; panel?: Panel }[] = [
-    { key: "patterns", label: dict.nav.patterns, href: href(locale, "/patterns"), panel: "explore" },
-    { key: "shop", label: dict.nav.products, href: href(locale, "/shop"), panel: "store" },
+    { key: "academy", label: dict.nav.education, href: href(locale, "/academy") },
     { key: "artists", label: dict.nav.artists, href: href(locale, "/artists") },
     { key: "portfolio", label: dict.nav.portfolio, href: href(locale, "/portfolio") },
-    { key: "academy", label: dict.nav.education, href: href(locale, "/academy") },
+    { key: "shop", label: dict.nav.products, href: href(locale, "/shop"), panel: "store" },
   ];
 
   return (
@@ -133,22 +158,76 @@ export function Header({ nav }: { nav: NavData }) {
               {theme === "dark" ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
             </button>
 
-            <Link
-              href={href(locale, user ? "/account" : "/login")}
-              aria-label={dict.nav.account}
-              className={cn("hidden sm:flex h-10 w-10 items-center justify-center rounded-md transition-colors", transparent ? "text-white/85 hover:bg-white/10" : "text-foreground-secondary hover:bg-background-secondary hover:text-foreground")}
-            >
-              {user ? (
-                <span className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-bold uppercase select-none",
-                  transparent ? "bg-white/20 text-white ring-2 ring-white/40" : "bg-accent text-white ring-2 ring-accent/30"
-                )}>
-                  {user.name.trim().charAt(0)}
-                </span>
-              ) : (
+            {user ? (
+              /* Signed in: the avatar opens a small account menu, sign-out included. */
+              <div className="relative hidden sm:block" ref={accountRef}>
+                <button
+                  type="button"
+                  onClick={() => setAccountMenu((open) => !open)}
+                  aria-label={dict.nav.account}
+                  aria-haspopup="menu"
+                  aria-expanded={accountMenu}
+                  className={cn(
+                    "flex h-10 items-center gap-1.5 rounded-md px-1.5 transition-colors",
+                    transparent ? "text-white/85 hover:bg-white/10" : "text-foreground-secondary hover:bg-background-secondary hover:text-foreground",
+                  )}
+                >
+                  <span className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-bold uppercase select-none",
+                    transparent ? "bg-white/20 text-white ring-2 ring-white/40" : "bg-accent text-white ring-2 ring-accent/30"
+                  )}>
+                    {user.name.trim().charAt(0)}
+                  </span>
+                  <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", accountMenu && "rotate-180")} />
+                </button>
+
+                {accountMenu && (
+                  <div
+                    role="menu"
+                    className="absolute end-0 top-[calc(100%+0.5rem)] w-60 origin-top overflow-hidden rounded-2xl border border-border bg-surface p-2 shadow-medium anim-scale-fade"
+                  >
+                    <div className="border-b border-border px-3 pb-2.5 pt-1">
+                      <p className="truncate text-sm font-medium">{user.name}</p>
+                      <p className="truncate text-caption text-foreground-secondary" dir="ltr">{user.email}</p>
+                    </div>
+                    <nav className="py-1.5">
+                      {[
+                        { href: href(locale, "/account"), icon: <User className="h-4 w-4" />, label: fa ? "حساب من" : "My account" },
+                        { href: href(locale, "/account/licenses"), icon: <ReceiptText className="h-4 w-4" />, label: fa ? "گواهی‌ها و دانلودها" : "Licenses & downloads" },
+                        ...(user.role === "artist" || user.role === "admin"
+                          ? [
+                              { href: href(locale, "/artist"), icon: <LayoutDashboard className="h-4 w-4" />, label: fa ? "داشبورد هنرمند" : "Artist dashboard" },
+                              { href: href(locale, "/artist/marketplace"), icon: <Store className="h-4 w-4" />, label: fa ? "میز کار فروش" : "Sales studio" },
+                            ]
+                          : []),
+                      ].map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          role="menuitem"
+                          onClick={() => setAccountMenu(false)}
+                          className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-foreground-secondary transition hover:bg-background-secondary hover:text-foreground"
+                        >
+                          {item.icon}
+                          {item.label}
+                        </Link>
+                      ))}
+                    </nav>
+                    <div className="border-t border-border pt-1.5">
+                      <SignOutButton variant="menu" label={fa ? "خروج از حساب" : "Sign out"} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                href={href(locale, "/login")}
+                aria-label={dict.nav.account}
+                className={cn("hidden sm:flex h-10 w-10 items-center justify-center rounded-md transition-colors", transparent ? "text-white/85 hover:bg-white/10" : "text-foreground-secondary hover:bg-background-secondary hover:text-foreground")}
+              >
                 <User className="h-[18px] w-[18px]" />
-              )}
-            </Link>
+              </Link>
+            )}
 
             <button type="button" onClick={openCart} aria-label={dict.nav.cart} className={cn("relative flex h-10 w-10 items-center justify-center rounded-md transition-colors", transparent ? "text-white hover:bg-white/10" : "text-foreground hover:bg-background-secondary")}>
               <ShoppingBag className="h-[18px] w-[18px]" />
@@ -167,7 +246,6 @@ export function Header({ nav }: { nav: NavData }) {
 
         {/* Panels */}
         <div onMouseEnter={() => panel && openPanel(panel)} className={cn("hidden lg:block absolute inset-x-0 top-full origin-top transition-[opacity,transform] duration-200 ease-[var(--ease-out)]", panel ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none -translate-y-1 opacity-0")} aria-hidden={!panel}>
-          {panel === "explore" && <MegaMenu nav={nav} onNavigate={() => setPanel(null)} />}
           {panel === "store" && <StoreDropdown nav={nav} onNavigate={() => setPanel(null)} />}
         </div>
       </header>
@@ -185,6 +263,7 @@ function MobileMenu({ open, onClose, nav, links, switchHref, otherLocale }: { op
   const { locale, dict } = useLocale();
   const { theme, toggle } = useTheme();
   const { user } = useAuth();
+  const fa = locale === "fa";
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
     return () => {
@@ -213,12 +292,28 @@ function MobileMenu({ open, onClose, nav, links, switchHref, otherLocale }: { op
             ))}
           </div>
           <div className="mt-6 flex flex-col gap-2 text-sm">
+            <Link onClick={onClose} href={href(locale, "/patterns")} className="py-2 text-foreground-secondary">{dict.nav.patterns}</Link>
+            <Link onClick={onClose} href={href(locale, "/marketplace")} className="py-2 text-foreground-secondary">{locale === "fa" ? "فایل دیجیتال" : "Digital files"}</Link>
             <Link onClick={onClose} href={href(locale, "/collections")} className="py-2 text-foreground-secondary">{dict.nav.collections}</Link>
             <Link onClick={onClose} href={href(locale, "/projects")} className="py-2 text-foreground-secondary">{dict.nav.projects}</Link>
             <Link onClick={onClose} href={href(locale, "/custom")} className="py-2 text-foreground-secondary">{dict.nav.custom}</Link>
             <Link onClick={onClose} href={href(locale, "/stories")} className="py-2 text-foreground-secondary">{dict.nav.stories}</Link>
             <Link onClick={onClose} href={href(locale, user ? "/account" : "/login")} className="py-2 text-foreground-secondary">{dict.nav.account}</Link>
+            {user && (user.role === "artist" || user.role === "admin") && (
+              <Link onClick={onClose} href={href(locale, "/artist")} className="py-2 text-foreground-secondary">
+                {fa ? "داشبورد هنرمند" : "Artist dashboard"}
+              </Link>
+            )}
           </div>
+          {user && (
+            <div className="mt-6 flex items-center justify-between gap-3 rounded-2xl border border-border p-4">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{user.name}</p>
+                <p className="truncate text-caption text-foreground-secondary" dir="ltr">{user.email}</p>
+              </div>
+              <SignOutButton size="sm" />
+            </div>
+          )}
           <div className="mt-6 flex items-center gap-2">
             <Link href={switchHref} onClick={onClose} className="inline-flex h-10 items-center rounded-full border border-border px-4 text-sm font-semibold uppercase">{otherLocale === "fa" ? "فارسی" : "English"}</Link>
             <button type="button" onClick={toggle} className="inline-flex h-10 items-center gap-2 rounded-full border border-border px-4 text-sm">{theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}{dict.nav.theme}</button>

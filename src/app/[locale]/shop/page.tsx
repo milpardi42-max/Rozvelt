@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
-import Image from "next/image";
-import Link from "next/link";
-import { ArrowUpRight, Truck } from "lucide-react";
-import { ShopFiltered } from "@/components/product/ShopFiltered";
-import { Badge } from "@/components/ui/Badge";
+import { ShopFiltered, type FamilyOption } from "@/components/product/ShopFiltered";
+import { ShopHero } from "@/components/shop/ShopHero";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
-import { getSite } from "@/lib/data/queries";
+import { FAMILY_PARENT, PRODUCT_FAMILIES } from "@/lib/data/families";
+import { enrichProduct, getSite } from "@/lib/data/queries";
 import { dictionaries } from "@/lib/i18n/dictionary";
 import type { Locale } from "@/lib/i18n/types";
 import { href, t } from "@/lib/utils";
@@ -24,9 +22,19 @@ export default async function ShopPage({ params }: { params: Promise<{ locale: L
   const site = await getSite();
   const d = dictionaries[locale];
   const exclusive = site.collections.find((c) => c.slug === "atelier-exclusive");
-  const heroProduct = site.products.find((p) => !p.artistId && p.featured) ?? site.products[0];
   const banner = site.banners.find((b) => b.enabled && b.placement === "shop");
   const usedCats = site.categories.filter((c) => site.products.some((p) => p.categoryId === c.id));
+
+  /* The eight product families every pattern is made for — the «الگو» tree in the sidebar.
+     All of them stay listed (even before the first product lands in one) so an artist's
+     upload always has a real category to point at. */
+  const families: FamilyOption[] = PRODUCT_FAMILIES.map((family) => {
+    const count = site.products.filter((p) => p.familyId === family.id).length;
+    return { id: family.slug, label: family.name[locale] ?? family.name.fa, count: count || undefined };
+  });
+
+  /* The hero picks its product tiles from the real catalogue. */
+  const products = site.products.slice().sort((a, b) => a.order - b.order).map((p) => enrichProduct(site, p));
 
   const breadcrumb = [
     { label: d.nav.home, href: href(locale, "/") },
@@ -35,40 +43,31 @@ export default async function ShopPage({ params }: { params: Promise<{ locale: L
 
   return (
     <>
-      {/* Boutique hero */}
+      {/* Boutique hero — panel · product mosaic · family rail (see ShopHero) */}
       <section className="container-x pt-[calc(var(--header-h)+1.5rem)]">
         <Breadcrumb items={breadcrumb} locale={locale} className="mb-5" />
-        <div className="grid gap-6 overflow-hidden rounded-xl bg-background-secondary lg:grid-cols-12">
-          <div className="flex flex-col justify-center p-8 md:p-12 lg:col-span-6">
-            <p className="anim-blur-in text-label text-accent">{d.common.siteExclusive}</p>
-            <h1 className="anim-blur-in mt-4 font-display text-h1 text-balance" style={{ animationDelay: "80ms" }}>{exclusive ? t(exclusive.title, locale) : d.nav.products}</h1>
-            <p className="anim-blur-in mt-4 max-w-md text-body-lg text-foreground-secondary" style={{ animationDelay: "160ms" }}>{exclusive ? t(exclusive.description, locale) : d.home.exclusiveDesc}</p>
-            <div className="anim-fade-up mt-8 flex flex-wrap gap-2" style={{ animationDelay: "240ms" }}>
-              <Link href={href(locale, "/shop?owner=site")} className="rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background">{d.common.siteExclusive}</Link>
-              <Link href={href(locale, "/shop?owner=artist")} className="rounded-full border border-border px-4 py-2 text-sm hover:border-foreground">{d.common.artistProduct}</Link>
-            </div>
-            {banner && (
-              <p className="anim-fade-up mt-8 inline-flex items-center gap-2 text-caption text-foreground-secondary" style={{ animationDelay: "320ms" }}>
-                <Truck className="h-4 w-4 text-accent" />
-                <strong className="font-medium text-foreground">{t(banner.title, locale)}</strong> · {t(banner.text, locale)}
-              </p>
-            )}
-          </div>
-          {heroProduct && (
-            <Link href={href(locale, `/shop/${heroProduct.slug}`)} className="group relative min-h-[320px] overflow-hidden lg:col-span-6 lg:min-h-[480px]">
-              <Image src={heroProduct.colors[0].image} alt={t(heroProduct.title, locale)} fill priority sizes="(max-width:1024px) 100vw, 50vw" className="img-zoom object-cover" />
-              <div className="absolute inset-0 vignette opacity-80" />
-              <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-6 text-white">
-                <div>
-                  <Badge tone="glass" className="text-accent">{d.common.featured}</Badge>
-                  <p className="mt-2 font-display text-h3">{t(heroProduct.title, locale)}</p>
-                  <p className="text-caption text-white/70" dir="ltr">{heroProduct.sku}</p>
-                </div>
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-black"><ArrowUpRight className="h-4 w-4 rtl-flip arrow-shift" /></span>
-              </div>
-            </Link>
-          )}
-        </div>
+        <ShopHero
+          locale={locale}
+          eyebrow={locale === "fa" ? "فروشگاه رزی آتلیه" : "The Rosie Atelier shop"}
+          title={exclusive ? t(exclusive.title, locale) : d.nav.products}
+          description={exclusive ? t(exclusive.description, locale) : d.home.exclusiveDesc}
+          products={products}
+          families={families}
+          brand={d.brand}
+          labels={{
+            siteExclusive: d.common.siteExclusive,
+            artistProduct: d.common.artistProduct,
+            featured: d.common.featured,
+            colourways: d.common.colorways,
+            browseFamily: locale === "fa" ? "مرور بر اساس خانواده" : "Browse by family",
+            allColourways: locale === "fa" ? "همه‌ی رنگ‌بندی‌ها" : "All colourways",
+            products: locale === "fa" ? "محصول" : "Products",
+            productFamilies: locale === "fa" ? "خانواده‌ی سطح" : "Surface families",
+            makers: locale === "fa" ? "طراح همکار" : "Contributing designers",
+            studio: locale === "fa" ? "رزی آتلیه" : "Rosie Atelier",
+          }}
+          banner={banner ? { title: t(banner.title, locale), text: t(banner.text, locale) } : null}
+        />
       </section>
 
       <div className="container-x pb-20 pt-10">
@@ -76,6 +75,8 @@ export default async function ShopPage({ params }: { params: Promise<{ locale: L
           site={site}
           locale={locale}
           title={locale === "fa" ? "فروشگاه سطح و دکور" : "Surface & décor shop"}
+          families={families}
+          familyParent={FAMILY_PARENT[locale]}
           categories={usedCats
             .slice()
             .sort((a, b) => a.order - b.order)

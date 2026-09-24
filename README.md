@@ -40,6 +40,31 @@ npm ci && npm run build && npm start
 # → http://localhost:3000/fa
 ```
 
+`npm run build` also runs `postbuild` (`scripts/sync-standalone.mjs`), which copies `public/`
+and `dist/.next/static/` into `dist/.next/standalone/` — `next build` does not do that itself, and
+without it the standalone server answers HTML while every stylesheet, script and image 404s.
+
+To run the standalone bundle instead of `next start`:
+
+```bash
+npm run build
+ADMIN_EMAIL=… ADMIN_PASSWORD=… AUTH_SECRET=… PORT=3000 HOSTNAME=0.0.0.0 \
+  node dist/.next/standalone/server.js      # it chdirs into dist/.next/standalone itself
+```
+
+If you ever build and then move things by hand, re-run `node scripts/sync-standalone.mjs` before
+starting the server.
+
+#### Runtime data and builds
+
+The store writes JSON and master files into `data/` relative to the working directory, so the
+standalone server owns `dist/.next/standalone/data`. `next build` bundles the repository copy of
+`data/*.json` (and `data/objects/**`) into that same folder — without protection, every deploy
+would overwrite live uploads, orders, licences and reservations with the committed snapshot.
+`scripts/preserve-data.mjs` fixes that: `prebuild` snapshots the running store to
+`.runtime-data/`, `postbuild` restores it verbatim. To re-seed the running store from `data/` on
+purpose, build with `ROZVELT_DATA_FROM_REPO=1`.
+
 ## Structure
 
 ```
@@ -49,6 +74,7 @@ src/
     patterns/ shop/ artists/ portfolio/ academy/ styles/ spaces/ collections/
     stories/ projects/ custom/ about/ contact/ faq/ returns/ legal/[doc]/
     login/ signup/ account/ favorites/ checkout/ search/ creators/join/ admin/
+    artist/                # dashboard (new) · marketplace (sales studio) · portfolio (manager)
   app/api/                 # newsletter, contact, admin content, auth, search-index, health
   app/sitemap.ts robots.ts # generated SEO files (use NEXT_PUBLIC_SITE_URL)
   components/
@@ -58,11 +84,16 @@ src/
     cards/                 # PatternCard, ProductCard, ArtistCard, PortfolioCard, EducationCard, StyleCard
     product/               # ColorSwatches, Actions, QuickView, Gallery, FilterBar, BuyBoxes
     portfolio/ profile/ home/ admin/ providers/
+    artist/                # ArtistDashboardView + dashboard parts (server-rendered)
+    portfolio/             # PortfolioGrid, PortfolioIntro (the founder's introduction), lightbox
   lib/
     i18n/                  # locale types + dictionary
     data/seed.ts           # seed content (patterns, products, artists, portfolios, education…)
     data/store.ts          # content store (Upstash Redis → Vercel Blob → data/content.json)
     data/queries.ts        # enrich/join helpers
+    artist/dashboard.ts    # everything the artist dashboard renders (server-side)
+    portfolio-translations.ts  # bilingual copy of the founder's personal portfolio (/{locale}/razieh)
+    razieh-profile.ts      # the founder's complete introduction (bio, path, facts) for /portfolio
     types.ts               # data model
   app/globals.css          # single source of truth: tokens, typography, motion, primitives
 public/
@@ -80,6 +111,144 @@ public/
 - **Motion**: `anim-blur-in`, `anim-fade-up`, `anim-scale-fade`, `[data-reveal]` scroll reveal,
   `img-zoom`, `arrow-shift`, `.spotlight` — all respect `prefers-reduced-motion`.
 - **RTL/LTR**: logical properties only (`ms/me/ps/pe/start/end/inset-inline`), `rtl-flip` for icons.
+
+## Digital marketplace
+
+The digital licensing storefront (private master upload → admin review → payment → signed download →
+PDF certificate → royalties → subscriptions) is documented in **[`MARKETPLACE.md`](./MARKETPLACE.md)** —
+including the audit, every new route, the env flags and a step-by-step test recipe.
+Without `ZARINPAL_MERCHANT_ID` the built-in sandbox gateway takes over, so a full test purchase works
+end-to-end today.
+
+## The shop hero
+
+The shop's hero (`src/components/shop/ShopHero.tsx`, rendered by `/{locale}/shop`) is one section in
+four movements — and the only part of the shop that is custom; the catalogue below it (family
+sections, sidebar tree, filters, sorting) is `ShopFiltered`, unchanged:
+
+1. **the boutique panel** — a dark editorial card: the shop eyebrow, the collection's title and copy,
+   and the two doors into the catalogue (`/shop?owner=site` · `/shop?owner=artist`);
+2. **live numbers** taken from the real catalogue, not typed by hand: products · families in use
+   (e.g. `4/8`) · colourways · contributing designers;
+3. **the product mosaic** — the lead site-owned featured piece (family · maker · SKU · price), a
+   second piece, and the lead's colourways with their swatch tiles, instead of a single flat image;
+4. **the family rail** — all eight families of `lib/data/families.ts` as `?family=<slug>` chips with
+   their counts, beside the service note from the shop banner.
+
+`scripts/marketplace-smoke/shop-hero-e2e.sh` pins it down in both locales: the panel and its two
+CTAs, the four numbers **recomputed from the store the server is using** (`DATA=…`), the mosaic
+(lead link, badge, SKU, family, second piece, colourway names and images), all eight family links
+with their real counts, and that the catalogue below (family sections, result counter, `?family=`
+isolation) still behaves.
+
+## Product taxonomy (families)
+
+Products belong to one of eight families, defined once in `src/lib/data/families.ts` and stored on
+`Product.familyId` (and, for marketplace uploads, on `UploadSession.meta.familyId` → `Asset.familyId`):
+
+کاغذ دیواری · پارچه دکوراسیون داخلی · پرده · کوسن · روتختی · رومیزی · پارچه مبلمان · آثار هنری دیواری
+(Wallpaper · Home Fabric · Curtain · Cushion · Bedding · Tablecloth · Upholstery Fabric · Wall Art)
+
+- **Shop** — `/{locale}/shop` renders one section per family in that order (plus «سایر محصولات /
+  Other products» for products without a family) and `?family=<slug>` filters to a single family;
+  `?family` composes with `?category`, `?artist`, sorting and search. Style categories are unchanged.
+- **Sidebar** — the families appear as nested sub-categories under «الگو / Pattern», above the style
+  categories, with live counts.
+- **Artist upload** — the uploader in the artist profile requires a family; the session API answers
+  `invalid_family` otherwise. After a successful upload the artist is redirected to that family in the
+  shop (`/{locale}/shop?family=<slug>`), and `/artist` shows the family next to each asset.
+- **Admin** — `ProductsManager` gives every product a «دسته محصول» selector (including «بدون دسته»).
+
+## Artists: registration & dashboard
+
+Registration is the two doors the site always had, each with its own form:
+
+- `/{locale}/signup` — **the registration form**: it carries the account-type choice itself
+  («خریدار» / «هنرمند / طراح», radios named `account_role`) next to the four account fields (name,
+  e-mail, password, confirmation) — pick the artist half and the account is created as an artist. The
+  shell then hands the new account over to the login transition.
+- `/{locale}/creators/join` — **designers / sellers**: the signup page with the perks, the designers
+  already on board and its own single-page seller form (name, e-mail, phone, field of practice, city,
+  Instagram, portfolio and the password pair). Only the four account fields are required; the rest is
+  optional and can be completed later from the artist dashboard. `POST /api/auth/signup` creates the
+  account, stores what was given on the `Artist` record (`signupPhone`, `signupCity`,
+  `signupSpecialty`, `signupPortfolioUrl`, the Instagram handle and the portfolio link), signs the
+  designer in and sends the file to admin review as `pending`. Together the two doors cover both
+  kinds of account: the quick one for buyers (and for designers who want to fill the file in later) and
+  the full seller application for designers.
+
+The artist area:
+
+- `/{locale}/artist` — **artist dashboard** (server-rendered): identity + status, onboarding ribbon,
+  KPIs with 30-day trend arrows, work status, wallet & payout summary, delivery-at-a-glance
+  (colourways · files · total size · format spread), "make it sell better" hints (missing recommended
+  formats, single-colour works, missing previews), every work with its colour swatches and format
+  chips, latest ledger rows and the sales mix. Quick actions deep-link into the studio tabs.
+- `/{locale}/artist/marketplace` — the sales studio (`?tab=assets|upload|wallet|analytics|affiliate`).
+- `/{locale}/artist/portfolio` — the portfolio manager (patterns, products, profile, stats).
+- `/{locale}/account` — **the designer's own profile page is the dashboard**: an artist (or any account
+  with an artist profile) gets `ArtistDashboardPanel` — the very same server-rendered dashboard, with
+  none of the buyer sections (no overview, reservations, orders or settings, no account banner). Both
+  routes render byte-for-byte the same content. **Buyers** keep their account view untouched.
+- Signed-out visitors are redirected to login; a signed-in **buyer** is shown an honest upsell to the
+  designer registration instead of a form they cannot use (the artist APIs still enforce the role).
+
+## The portfolio page & the founder's introduction
+
+`/{locale}/portfolio` is the atelier's gallery — and it now opens with a **complete, dedicated
+introduction of راضیه خیری‌پور**, the founder. The page reads:
+
+1. the page hero (breadcrumb, «گالری پروژه‌های اجراشده») as before;
+2. **the introduction** — portrait/atelier image, the eyebrow «معرفی بنیان‌گذار», the name, her
+   standing and her fields, the full five-paragraph biography, the discipline chips, the signature,
+   then the four key numbers (years of practice · patterns · exhibitions · students);
+3. **the path and the facts** — «مسیر حرفه‌ای» with its four milestones (2009 · teaching · 2023 ·
+   today) beside «در یک نگاه» (academic role, field of work, based in, languages) and the card that
+   leads to her personal portfolio;
+4. **the works** — the «آثار منتخب و پروژه‌های اجراشده» heading, the statistics bar, the filter bar
+   and the masonry grid of the six realised projects (untouched);
+5. **the closing band** — how to collaborate: contact, academy, the studio and the designer entry.
+
+All of the copy lives in `src/lib/razieh-profile.ts` (bilingual `fa` / `en`) and is rendered by
+`src/components/portfolio/PortfolioIntro.tsx` on the server, so every line of the introduction is in
+the first HTML response.
+
+The two portfolio surfaces are now one experience: the introduction links to **`/{locale}/razieh`**,
+the founder's own portfolio page (hero · about · works · philosophy · academic · contact, with its own
+language switch), which links back to the atelier's gallery in its hero menu. `/razieh` is also
+listed in the footer and in `sitemap.xml`, so it is no longer an orphan page.
+
+The rig for all of this is `scripts/marketplace-smoke/portfolio-e2e.sh` (78 checks across both
+locales): the introduction is complete and sits above the works, the gallery keeps its six projects,
+the two pages point at each other, and the footer/sitemap entries exist.
+
+## Signing out
+
+`SignOutButton` (`src/components/profile/SignOutButton.tsx`) is the single sign-out control, in four
+variants (`solid` / `outline` / `ghost` / `menu` + an icon-only form). It is offered everywhere a
+signed-in visitor can be:
+
+| Where | How it appears |
+|---|---|
+| Header | avatar opens an account menu (account, licenses, artist dashboard, sales studio) ending with «خروج از حساب» |
+| Header (mobile) | the menu shows the signed-in account card with a sign-out button |
+| `/account` | profile header button, a row at the end of the sidebar menu, and a dedicated row in **Settings** |
+| `/account/licenses` | same header shell |
+| `/artist`, `/artist/marketplace`, `/artist/portfolio` | button next to the page actions |
+
+Clicking it clears the session cookie, **replaces** the history entry (so Back cannot return to a
+private page) and refreshes the router, so every server component re-renders as a guest.
+
+Data for the dashboard comes from `src/lib/artist/dashboard.ts` (artist record + works with delivery
+detail + analytics with a previous-period comparison + wallet), so the page itself is a pure view.
+
+## Academy
+
+The academy homepage (hero preview video, real computed statistics, real enrolment form) and the
+navigation change (آکادمی · هنرمندان · پورتفولیو · فروشگاه) are documented in
+**[`ACADEMY.md`](./ACADEMY.md)** — including how the preview video is generated
+(`scripts/academy/make-preview-video.py`), how an admin can replace it by uploading a video for a
+course, and the enrolment smoke check (`scripts/academy/enroll-e2e.sh`).
 
 ## Admin
 

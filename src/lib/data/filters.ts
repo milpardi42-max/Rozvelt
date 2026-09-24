@@ -24,11 +24,20 @@ export function filterPatterns(list: Pattern[], sp: SP, categorySlugToId: Record
   return out;
 }
 
-export function filterProducts(list: Product[], sp: SP, categorySlugToId: Record<string, string>) {
+export function filterProducts(
+  list: Product[],
+  sp: SP,
+  categorySlugToId: Record<string, string>,
+  /* Product families (wallpaper / curtain / …) — see `lib/data/families.ts`. */
+  familySlugToId: Record<string, string> = {},
+) {
   let out = list.slice().sort((a, b) => a.order - b.order);
   const cat = one(sp.category);
   const owner = one(sp.owner);
+  const family = one(sp.family);
   if (cat && categorySlugToId[cat]) out = out.filter((p) => p.categoryId === categorySlugToId[cat]);
+  if (family && familySlugToId[family]) out = out.filter((p) => p.familyId === familySlugToId[family]);
+  if (family === "other") out = out.filter((p) => !p.familyId);
   if (owner === "site") out = out.filter((p) => !p.artistId);
   if (owner === "artist") out = out.filter((p) => !!p.artistId);
   const sort = one(sp.sort);

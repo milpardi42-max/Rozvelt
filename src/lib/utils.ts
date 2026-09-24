@@ -16,6 +16,15 @@ export function faNum(n: number | string): string {
   return String(n).replace(/\d/g, (d) => faDigits[Number(d)]);
 }
 
+/**
+ * Paid-only price label — `null` means free.
+ * Lives here (not in a `"use client"` module) so server components can call it too.
+ */
+export function priceLabel(price: { fa: number; en: number } | undefined, locale: Locale): string | null {
+  if (!price || (price.fa <= 0 && price.en <= 0)) return null;
+  return locale === "fa" ? `${faNum(price.fa.toLocaleString("en-US"))} تومان` : `$${price.en}`;
+}
+
 export function formatPrice(price: { fa: number; en: number }, locale: Locale): string {
   if (locale === "fa") {
     return `${faNum(price.fa.toLocaleString("en-US"))} تومان`;

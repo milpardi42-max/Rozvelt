@@ -45,6 +45,16 @@ export interface Artist {
   signupCity?: string;
   signupSpecialty?: string;
   signupPortfolioUrl?: string;
+  /** Studio / brand name given by the designer at signup */
+  signupStudio?: string;
+  /** Years of practice, as declared at signup (free text, 1–60) */
+  signupExperience?: string;
+  /** Delivery formats the designer said they will upload (format ids) */
+  signupFormats?: string[];
+  /** Product families the designer works in (family ids) */
+  signupFamilies?: string[];
+  /** When the seller terms were accepted during registration */
+  signupTermsAt?: string;
   /** Admin rejection note, optionally set when status → "rejected" */
   rejectionNote?: string;
   /**
@@ -135,6 +145,13 @@ export interface Product {
   title: Localized;
   description: Localized;
   categoryId: ID;
+  /**
+   * Product family (see `lib/data/families.ts`) — the real surface the product is
+   * made for: wallpaper, home fabric, curtain, cushion, bedspread, tablecloth,
+   * upholstery fabric or wall art. Optional: products created before the taxonomy
+   * exist are grouped under «سایر محصولات» in the shop.
+   */
+  familyId?: ID | null;
   patternId: ID | null;
   artistId: ID | null; // null → site-owned
   price: { fa: number; en: number };
@@ -204,7 +221,8 @@ export type ReservationStatus = "reserved" | "cancelled" | "attended";
 export interface AcademyReservation {
   id: ID;
   eventSlug: string;
-  eventType: "workshop" | "webinar";
+  /** "course" entries are self-paced enrollments; workshop/webinar entries are live-event seats. */
+  eventType: "course" | "workshop" | "webinar";
   eventTitle: Localized;
   startsAt: string;
   userId?: ID;

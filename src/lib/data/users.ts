@@ -129,6 +129,18 @@ export interface ArtistSignupExtra {
   specialty?: string;
   instagram?: string;
   portfolioUrl?: string;
+  /** Studio / brand name (seller registration) */
+  studioName?: string;
+  /** Years of practice (seller registration) */
+  experience?: string;
+  /** Short "about" written by the designer — becomes the public bio */
+  bio?: string;
+  /** Delivery formats the designer declared (format ids, already validated) */
+  formats?: string[];
+  /** Product families the designer works in (family ids, already validated) */
+  families?: string[];
+  /** Timestamp of the accepted seller terms */
+  termsAt?: string;
 }
 
 export async function createUser(
@@ -212,7 +224,7 @@ async function createPendingArtist(
       fa: extra?.specialty || "هنرمند / طراح",
       en: extra?.specialty || "Artist / Designer",
     },
-    bio: { fa: "", en: "" },
+    bio: { fa: extra?.bio?.trim() ?? "", en: extra?.bio?.trim() ?? "" },
     avatar: "/images/artists/placeholder.jpg",
     cover: "/images/artists/cover-placeholder.jpg",
     location: { fa: cityVal, en: cityVal },
@@ -233,6 +245,11 @@ async function createPendingArtist(
     ...(extra?.city ? { signupCity: extra.city } : {}),
     ...(extra?.specialty ? { signupSpecialty: extra.specialty } : {}),
     ...(extra?.portfolioUrl ? { signupPortfolioUrl: extra.portfolioUrl } : {}),
+    ...(extra?.studioName ? { signupStudio: extra.studioName } : {}),
+    ...(extra?.experience ? { signupExperience: extra.experience } : {}),
+    ...(extra?.formats?.length ? { signupFormats: extra.formats } : {}),
+    ...(extra?.families?.length ? { signupFamilies: extra.families } : {}),
+    ...(extra?.termsAt ? { signupTermsAt: extra.termsAt } : {}),
   };
 
   await updateCollection("artists", [...content.artists, newArtist]);

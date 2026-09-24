@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PageHero } from "@/components/ui/PageHero";
 import { PortfolioGrid } from "@/components/portfolio/PortfolioGrid";
+import { PortfolioCollaboration, PortfolioIntro } from "@/components/portfolio/PortfolioIntro";
 import { enrichPortfolio, getSite } from "@/lib/data/queries";
 import { dictionaries } from "@/lib/i18n/dictionary";
 import type { Locale } from "@/lib/i18n/types";
@@ -43,6 +44,25 @@ export default async function PortfolioPage({ params }: { params: Promise<{ loca
         zoomDirection="out"
       />
 
+      {/* The founder's introduction — who the studio belongs to, in full */}
+      <PortfolioIntro locale={locale} />
+
+      {/* Works heading — the gallery that follows the introduction */}
+      <section id="works" className="container-x scroll-mt-[calc(var(--header-h)+1rem)] pt-16">
+        <p className="text-label flex items-center gap-3 text-accent">
+          <span className="inline-block h-px w-6 bg-accent/60" />
+          {locale === "fa" ? "آثار و پروژه‌ها" : "Works & projects"}
+        </p>
+        <h2 className="mt-4 font-display text-h2 text-balance">
+          {locale === "fa" ? "آثار منتخب و پروژه‌های اجراشده" : "Selected works & realised projects"}
+        </h2>
+        <p className="mt-3 max-w-2xl text-body-lg text-foreground-secondary">
+          {locale === "fa"
+            ? "گزیده‌ای از الگوها، کاغذدیواری‌ها، پارچه‌ها و پرده‌هایی که به دیوار و فضای واقعی رسیده‌اند."
+            : "A selection of patterns, wallpapers, textiles and drapery that made it onto real walls and into real spaces."}
+        </p>
+      </section>
+
       {/* Stats bar */}
       <section className="container-x pt-8 pb-4">
         <div className="grid grid-cols-3 divide-x divide-border rounded-xl border border-border bg-background-secondary rtl:divide-x-reverse">
@@ -65,6 +85,9 @@ export default async function PortfolioPage({ params }: { params: Promise<{ loca
           <PortfolioGrid items={items} categories={categories} />
         </Suspense>
       </section>
+
+      {/* Closing band — the ways to work with the atelier */}
+      <PortfolioCollaboration locale={locale} />
     </>
   );
 }

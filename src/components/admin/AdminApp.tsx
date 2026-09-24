@@ -29,6 +29,7 @@ import {
   Settings2,
   ShoppingBag,
   Sparkles,
+  ArrowUpLeft,
   SlidersHorizontal,
   Tag,
   Trash2,
@@ -71,7 +72,8 @@ type Section =
   | "education"
   | "banners"
   | "seo"
-  | "announcement-bars";
+  | "announcement-bars"
+  | "marketplace";
 
 /* برچسب‌های فارسی بخش‌های صفحه اصلی */
 const SECTION_LABELS: Record<HomeSectionKey, string> = {
@@ -114,7 +116,8 @@ async function adminFetch<T>(init?: RequestInit): Promise<T> {
    ============================================================ */
 interface NavGroup {
   label: string;
-  items: { id: Section; label: string; icon: React.ReactNode; badge?: string }[];
+  /** `href` turns an entry into a link to another admin screen (own route). */
+  items: { id: Section; label: string; icon: React.ReactNode; badge?: string; href?: string }[];
 }
 
 const NAV_GROUPS: NavGroup[] = [
@@ -141,6 +144,12 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "کاتالوگ",
     items: [
+      {
+        id: "marketplace",
+        label: "فایل دیجیتال (فروشگاه)",
+        icon: <Sparkles className="h-4 w-4" />,
+        href: "/admin/fa/marketplace",
+      },
       { id: "categories", label: "دسته‌بندی‌ها", icon: <Tag className="h-4 w-4" /> },
       { id: "patterns", label: "پترن‌ها", icon: <Palette className="h-4 w-4" /> },
       { id: "products", label: "محصولات", icon: <ShoppingBag className="h-4 w-4" /> },
@@ -312,6 +321,26 @@ export function AdminApp() {
               </p>
               {group.items.map((item) => {
                 const active = section === item.id;
+                const classes = cn(
+                  "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                  active
+                    ? "bg-accent/90 text-white font-medium"
+                    : "text-white/65 hover:bg-white/[0.08] hover:text-white",
+                );
+                if (item.href) {
+                  return (
+                    <a
+                      key={item.id}
+                      href={item.href}
+                      className={classes}
+                      onClick={() => setSidebarOpen(false)}
+                    >
+                      <span className="shrink-0 text-white/50">{item.icon}</span>
+                      <span className="truncate">{item.label}</span>
+                      <ArrowUpLeft className="mr-auto h-3.5 w-3.5 text-white/40" />
+                    </a>
+                  );
+                }
                 return (
                   <button
                     key={item.id}
@@ -319,12 +348,7 @@ export function AdminApp() {
                       setSection(item.id);
                       setSidebarOpen(false);
                     }}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                      active
-                        ? "bg-accent/90 text-white font-medium"
-                        : "text-white/65 hover:bg-white/[0.08] hover:text-white",
-                    )}
+                    className={classes}
                   >
                     <span className={cn("shrink-0", active ? "text-white" : "text-white/50")}>
                       {item.icon}

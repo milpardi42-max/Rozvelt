@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
   Heart,
-  LogOut,
   Package,
   Palette,
   Settings,
@@ -20,6 +19,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { useAuth, useCart, useFavorites, useLocale } from "@/components/providers/AppProviders";
+import { SignOutButton } from "@/components/profile/SignOutButton";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/States";
@@ -29,7 +29,7 @@ import type { Order } from "@/lib/data/orders";
 import type { AcademyReservation } from "@/lib/types";
 
 export function AccountView() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { ids } = useFavorites();
   const { lines } = useCart();
   const { locale, dict } = useLocale();
@@ -151,6 +151,11 @@ export function AccountView() {
   const quickLinks = [
     { href: href(locale, "/favorites"), icon: <Heart className="h-4 w-4" />, label: fa ? "علاقه‌مندی‌ها" : "Favorites" },
     { href: href(locale, "/checkout"), icon: <ShoppingBag className="h-4 w-4" />, label: fa ? "سبد خرید" : "Cart" },
+    {
+      href: href(locale, "/account/licenses"),
+      icon: <ShieldCheck className="h-4 w-4" />,
+      label: fa ? "لایسنس‌های دیجیتال" : "Digital licenses",
+    },
     ...(user.role === "artist" || user.role === "admin" ? [{ href: href(locale, "/artist"), icon: <Palette className="h-4 w-4" />, label: fa ? "داشبورد هنرمند" : "Artist Dashboard" }] : []),
     ...(user.role === "admin" ? [{ href: href(locale, "/admin"), icon: <ShieldCheck className="h-4 w-4" />, label: fa ? "پنل مدیریت" : "Admin Panel" }] : []),
   ];
@@ -189,14 +194,7 @@ export function AccountView() {
               )}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => { logout(); router.push(href(locale, "/")); }}
-            className="mb-1 inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm text-foreground-secondary transition hover:border-error hover:text-error"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            {fa ? "خروج" : "Sign out"}
-          </button>
+          <SignOutButton className="mb-1" />
         </div>
 
         {/* Main layout: sidebar + content */}
@@ -233,6 +231,10 @@ export function AccountView() {
                   </li>
                 ))}
               </ul>
+              {/* Sign out lives with the navigation, not only in the page header. */}
+              <div className="border-t border-border p-2">
+                <SignOutButton variant="ghost" size="sm" className="w-full justify-start rounded-xl" />
+              </div>
             </nav>
 
             {/* Quick links */}
@@ -475,6 +477,19 @@ export function AccountView() {
                     </li>
                   ))}
                 </ul>
+
+                {/* Sign out — a first-class row in settings, not a hidden link. */}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-6 py-5">
+                  <div>
+                    <p className="text-sm font-medium">{fa ? "خروج از حساب" : "Sign out"}</p>
+                    <p className="text-caption text-foreground-secondary">
+                      {fa
+                        ? "نشست شما در این دستگاه بسته می‌شود؛ لایسنس‌ها و دانلودها در حساب باقی می‌مانند."
+                        : "Ends the session on this device — your licenses and downloads stay in your account."}
+                    </p>
+                  </div>
+                  <SignOutButton variant="solid" />
+                </div>
               </div>
             )}
 

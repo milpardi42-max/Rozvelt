@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { ArrowDown } from "lucide-react";
 import { LangToggle } from "@/components/portfolio/LangToggle";
 import { usePortfolioLang } from "@/components/portfolio/PortfolioLangProvider";
@@ -54,10 +55,25 @@ export function PfHero() {
               </button>
             </li>
           ))}
+          {/* the way back to the atelier's own gallery and shop */}
+          <li>
+            <Link
+              href={`/${lang}/portfolio`}
+              className="text-[11px] uppercase tracking-[0.25em] text-pf-gold transition-colors hover:text-white"
+            >
+              {T("atelier", lang)}
+            </Link>
+          </li>
         </ul>
 
         {/* right side */}
         <div className="flex items-center gap-3">
+          <Link
+            href={`/${lang}/portfolio`}
+            className="text-[10px] uppercase tracking-[0.2em] text-pf-gold transition-colors hover:text-white md:hidden"
+          >
+            {T("atelier", lang)}
+          </Link>
           <LangToggle />
           <span className="hidden text-[11px] tracking-[0.18em] text-white/40 sm:block">
             {T("founded", lang)}
