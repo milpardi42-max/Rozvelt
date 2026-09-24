@@ -27,6 +27,7 @@ bash scripts/marketplace-smoke/family-e2e.sh      # product families: shop group
 bash scripts/marketplace-smoke/formats-e2e.sh     # colourways + PNG/JPG/preview/AI/PSD/SVG/EPS delivery
 bash scripts/marketplace-smoke/artist-dashboard-e2e.sh   # the two signup doors + artist dashboard
 bash scripts/marketplace-smoke/pages.sh           # every storefront/admin page renders
+bash scripts/marketplace-smoke/portfolio-e2e.sh   # the founder's introduction on /portfolio
 DATA=dist/.next/standalone/data \
 MARKETPLACE_MULTIPART_THRESHOLD_MB=5 \
 bash scripts/marketplace-smoke/multipart-e2e.sh   # 12 MB master uploaded in 8 MB chunks
@@ -62,6 +63,14 @@ Notes:
   the buyer account sections (while a buyer keeps their account page), and that signing out works
   everywhere. It creates and deletes its own accounts.
   **Note:** the signup endpoint
+- `portfolio-e2e.sh` is the portfolio rig: it asserts the complete, dedicated introduction of
+  راضیه خیری‌پور opens `/{locale}/portfolio` in both locales — eyebrow, name, role, all five
+  biography paragraphs, the four key numbers, the professional path with its four milestones and the
+  facts at a glance — that the introduction sits *above* the works heading and the gallery boundary,
+  while the gallery itself keeps its six projects, statistics bar and closing collaboration band.
+  It then checks that the two pages are one experience: the atelier's page links to `/{locale}/razieh`,
+  the personal portfolio page links back and still carries its own six sections, and both are
+  reachable from the footer and the sitemap.
 - The scripts print each step; `http-e2e.sh` also asserts that the downloaded bytes are byte-identical
   to the uploaded master and that a tampered token is rejected.
 - They write to the app's local storage backend (`data/objects` and `data/mk-*.json`). Point `DATA` at

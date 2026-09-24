@@ -16,6 +16,10 @@ check() { printf "%-58s" "$2"; code=$(curl -s -o /tmp/page.html -w "%{http_code}
 
 echo "── public pages"
 check "/fa" "home fa"
+check "/fa/portfolio" "portfolio gallery fa (founder introduction + works)"
+check "/en/portfolio" "portfolio gallery en"
+check "/fa/razieh" "the founder's personal portfolio fa"
+check "/en/razieh" "the founder's personal portfolio en"
 
 echo
 echo "── academy pages (hero video, course pages, admin-driven content)"

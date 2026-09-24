@@ -85,12 +85,15 @@ src/
     product/               # ColorSwatches, Actions, QuickView, Gallery, FilterBar, BuyBoxes
     portfolio/ profile/ home/ admin/ providers/
     artist/                # ArtistDashboardView + dashboard parts (server-rendered)
+    portfolio/             # PortfolioGrid, PortfolioIntro (the founder's introduction), lightbox
   lib/
     i18n/                  # locale types + dictionary
     data/seed.ts           # seed content (patterns, products, artists, portfolios, education…)
     data/store.ts          # content store (Upstash Redis → Vercel Blob → data/content.json)
     data/queries.ts        # enrich/join helpers
     artist/dashboard.ts    # everything the artist dashboard renders (server-side)
+    portfolio-translations.ts  # bilingual copy of the founder's personal portfolio (/{locale}/razieh)
+    razieh-profile.ts      # the founder's complete introduction (bio, path, facts) for /portfolio
     types.ts               # data model
   app/globals.css          # single source of truth: tokens, typography, motion, primitives
 public/
@@ -168,6 +171,35 @@ The artist area:
   routes render byte-for-byte the same content. **Buyers** keep their account view untouched.
 - Signed-out visitors are redirected to login; a signed-in **buyer** is shown an honest upsell to the
   designer registration instead of a form they cannot use (the artist APIs still enforce the role).
+
+## The portfolio page & the founder's introduction
+
+`/{locale}/portfolio` is the atelier's gallery — and it now opens with a **complete, dedicated
+introduction of راضیه خیری‌پور**, the founder. The page reads:
+
+1. the page hero (breadcrumb, «گالری پروژه‌های اجراشده») as before;
+2. **the introduction** — portrait/atelier image, the eyebrow «معرفی بنیان‌گذار», the name, her
+   standing and her fields, the full five-paragraph biography, the discipline chips, the signature,
+   then the four key numbers (years of practice · patterns · exhibitions · students);
+3. **the path and the facts** — «مسیر حرفه‌ای» with its four milestones (2009 · teaching · 2023 ·
+   today) beside «در یک نگاه» (academic role, field of work, based in, languages) and the card that
+   leads to her personal portfolio;
+4. **the works** — the «آثار منتخب و پروژه‌های اجراشده» heading, the statistics bar, the filter bar
+   and the masonry grid of the six realised projects (untouched);
+5. **the closing band** — how to collaborate: contact, academy, the studio and the designer entry.
+
+All of the copy lives in `src/lib/razieh-profile.ts` (bilingual `fa` / `en`) and is rendered by
+`src/components/portfolio/PortfolioIntro.tsx` on the server, so every line of the introduction is in
+the first HTML response.
+
+The two portfolio surfaces are now one experience: the introduction links to **`/{locale}/razieh`**,
+the founder's own portfolio page (hero · about · works · philosophy · academic · contact, with its own
+language switch), which links back to the atelier's gallery in its hero menu. `/razieh` is also
+listed in the footer and in `sitemap.xml`, so it is no longer an orphan page.
+
+The rig for all of this is `scripts/marketplace-smoke/portfolio-e2e.sh` (78 checks across both
+locales): the introduction is complete and sits above the works, the gallery keeps its six projects,
+the two pages point at each other, and the footer/sitemap entries exist.
 
 ## Signing out
 

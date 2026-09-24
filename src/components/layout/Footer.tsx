@@ -19,7 +19,7 @@ export function Footer() {
   const year = new Date().getFullYear();
 
   const cols = [
-    { title: dict.footer.discover, links: [[dict.nav.patterns, "/patterns"], [dict.nav.products, "/shop"], [locale === "fa" ? "فایل دیجیتال و لایسنس" : "Digital files & licensing", "/marketplace"], [locale === "fa" ? "اشتراک دانلود" : "Download passes", "/marketplace/subscriptions"], [dict.nav.artists, "/artists"], [dict.nav.portfolio, "/portfolio"], [dict.nav.education, "/academy"], [dict.nav.collections, "/collections"]] },
+    { title: dict.footer.discover, links: [[dict.nav.patterns, "/patterns"], [dict.nav.products, "/shop"], [locale === "fa" ? "فایل دیجیتال و لایسنس" : "Digital files & licensing", "/marketplace"], [locale === "fa" ? "اشتراک دانلود" : "Download passes", "/marketplace/subscriptions"], [dict.nav.artists, "/artists"], [dict.nav.portfolio, "/portfolio"], [locale === "fa" ? "پورتفولیوی راضیه خیری‌پور" : "Razieh Kheiripour's portfolio", "/razieh"], [dict.nav.education, "/academy"], [dict.nav.collections, "/collections"]] },
     { title: dict.footer.company, links: [[dict.nav.about, "/about"], [dict.nav.projects, "/projects"], [dict.nav.custom, "/custom"], [dict.nav.stories, "/stories"], [dict.nav.becomeCreator, "/creators/join"], [locale === "fa" ? "میز کار فروش هنرمند" : "Artist sales studio", "/artist/marketplace"]] },
     { title: dict.footer.support, links: [[dict.footer.faq, "/faq"], [dict.footer.returns, "/returns"], [dict.nav.contact, "/contact"], [dict.nav.account, user ? "/account" : "/login"], [locale === "fa" ? "راستی‌آزمایی گواهی" : "Verify a certificate", "/verify"], ...(user?.role === "admin" ? [[dict.nav.admin, "/admin"]] : [])] },
   ];
